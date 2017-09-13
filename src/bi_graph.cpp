@@ -1,4 +1,5 @@
 #include <limits.h>
+#include <cmath>
 #include "bi_graph.h"
 
 #define Min(a, b) ( (a)<(b) ? (a):(b) )
@@ -52,7 +53,6 @@ bool BiGraph::ReadConfigFile(const char* s_f_config, const char* s_f_log)
     bool res = true;
 
     if (!(res = ReadConfig.ReadInto("file", "train_data",  F_train_data_))) return res;
-    // 输出
     if (!(res = ReadConfig.ReadInto("file", "sim_item_txt",  F_output_idx_))) return res;
     if (!(res = ReadConfig.ReadInto("file", "sim_item_bin",  F_output_ivt_))) return res;
     if (!(res = ReadConfig.ReadInto("file", "user_id_map",   F_user_map_))) return res;
@@ -64,6 +64,7 @@ bool BiGraph::ReadConfigFile(const char* s_f_config, const char* s_f_log)
     if (!(res = ReadConfig.ReadInto("data", "lambda", lambda_))) return res;
     if (!(res = ReadConfig.ReadInto("data", "rho",    rho_))) return res;
     if (!(res = ReadConfig.ReadInto("data", "sigma",  sigma_))) return res;
+    if (!(res = ReadConfig.ReadInto("data", "top_reserve", top_reserve_))) return res;
     
     return res;
 }
@@ -168,6 +169,7 @@ bool BiGraph::LoadData(const string& dst) {
     while (getline (fin, line)) {
         stringUtils::split(line, " ", sep_vec);
         if (sep_vec.size() != 4) continue;
+        if (atof(vec[2].c_str() ) <= 0.0) continue;
         string user = sep_vec[0];
         string item = sep_vec[1];
 
@@ -186,8 +188,8 @@ bool BiGraph::LoadData(const string& dst) {
 
         buff[idc].user_id   = mapped_uid;
         buff[idc].item_id   = mapped_pid;
-        buff[idc].timestamp = mapped_pid;
-        buff[idc].score     = atof(vec[1].c_str());
+        buff[idc].score     = atof(vec[2].c_str());
+        buff[idc].timestamp = atoi(vec[3].c_str());
         cnt++;
 
         if (++idc >= BUFFERCNT) {
@@ -217,6 +219,12 @@ bool BiGraph::LoadData(const string& dst) {
     return true;
 }
 
+void BiGraph::normalize(vector<MatrixInvert>& vec, float norm) {
+    for (size_t i = 0; i < vec_invert_buf.size(); i++) {
+        vec_invert_buf[i].score /= norm;
+    }
+}
+    
 // user -> [items ]
 // input  bin: DataNode(sorted)
 // output bin: idx, ivt
@@ -252,17 +260,25 @@ bool BiGraph::MakeMatrixU2P(const string& f_src) {
 
         for (int i = 0; i < size; ++i) {
             if (uid_old != readbuf[i].user_id) {
-                strt_index.norm   = norm;
-                strt_index.count  = (int)vec_invert_buf.size();
-                strt_index.offset = (long long)from * sizeof(MatrixInvert);
+                if (norm > 0.0) {
+                    strt_index.norm   = norm;
+                    strt_index.count  = (int)vec_invert_buf.size();
+                    strt_index.offset = (long long)from * sizeof(MatrixInvert);
 
-                vec_matrix_idx_user_[uid_old] = strt_index;
-                fwrite(&vec_invert_buf[0], sizeof(MatrixInvert), strt_index.count, fp_ivt);
+                    vec_matrix_idx_user_[uid_old] = strt_index;
+                    normalize(vec_invert_buf, norm);
+                    fwrite(&vec_invert_buf[0], sizeof(MatrixInvert), strt_index.count, fp_ivt);
 
-                vec_invert_buf.clear();
-                uid_old = readbuf[i].user_id;
-                from   += strt_index.count;
-                norm = 0.0;
+                    vec_invert_buf.clear();
+                    uid_old = readbuf[i].user_id;
+                    from   += strt_index.count;
+                    norm = 0.0;
+                } else {
+                    vec_invert_buf.clear();
+                    uid_old = readbuf[i].user_id;
+                    norm = 0;
+                    printf("error norm: %f  (user: %d)", norm, uid_old);
+                }
             }
             strt_invert.id        = readbuf[i].item_id;
             strt_invert.score     = readbuf[i].score;
@@ -278,8 +294,8 @@ bool BiGraph::MakeMatrixU2P(const string& f_src) {
         strt_index.count  = (int)vec_invert_buf.size();
         strt_index.offset = (long long)from * sizeof(MatrixInvert);
         vec_matrix_idx_user_[uid_old] = strt_index;
-        fwrite(&vec_invert_buf[0], sizeof(MatrixInvert),
-               strt_index.count, fp_ivt);
+        normalize(vec_invert_buf, norm);
+        fwrite(&vec_invert_buf[0], sizeof(MatrixInvert), strt_index.count, fp_ivt);
     }
     delete []readbuf;
     readbuf = NULL;
@@ -337,6 +353,7 @@ bool BiGraph::MakeMatrixP2U(const string& f_src) {
                 pid_old = readbuf[i].item_id;
                 from   += strt_index.count;
                 norm = 0.0;
+                }
             }
             strt_invert.id        = readbuf[i].user_id;
             strt_invert.score     = readbuf[i].score;
@@ -369,56 +386,47 @@ bool BiGraph::Train() {
     cls_log_msg.log("-------------Train-------------");
     FILE* fp_ivt_item =  fopen(F_matrix_ivt_item_.c_str(),  "rb");
     FILE* fp_ivt_user =  fopen(F_matrix_ivt_user_.c_str(),  "rb");
+    FILE* fp_output_ivt =  fopen(F_output_ivt_.c_str(),  "wb");
     if (!fp_ivt_item || !fp_ivt_user) { printf("ERROR open file!\n"); return false;}
      
-    vector<MatrixInvert> buff_ivt;
-    vector<MatrixInvert>::iterator it_ivt;
-    vector<float> vec_score_user_old;
+    vector<MatrixInvert> vec_ivt_user;
+    vector<MatrixInvert> vec_ivt_item;
+    vector<MatrixInvert>::iterator iivt_user;
+    vector<MatrixInvert>::iterator iivt_item;
+    tNode ini_node;
+    ini_node.id = -1, ini_node.score = -1.0;
+    vector<tNode> vec_id_score;
 
-    vec_score_user_.resize(num_user_, 1.0);
-    vec_score_item_.resize(num_item_, 1.0);
-    vec_score_user_old.resize(num_user_, 1.0);
+    vec_id_score.resize(num_item_, ini_node);
 
-    float RSE_old = 0.;
-    for (int iter = 0; iter < iteration_; iter++) {
-        double max = INT_MIN;
-        for (size_t uid = 0; uid < num_user_; uid++) {
-            ReadInvert(fp_ivt_item, vec_matrix_idx_user_[uid], buff_ivt);
-            vec_score_user_[uid] = 0.;
-            for (it_ivt = buff_ivt.begin(); it_ivt != buff_ivt.end(); it_ivt++) {
-                vec_score_user_[uid] +=  it_ivt->score * vec_score_item_[it_ivt->id];
+    for (size_t pid = 0; pid < num_item_; pid ++) {
+        vec_id_score.assign(num_item_, ini_node);
+        ReadInvert(fp_ivt_item, vec_matrix_idx_item_[pid], vec_ivt_user);
+        for (iivt_user = vec_ivt_user.begin(); iivt_user != vec_ivt_user.end(); iivt_user++) {
+            int uid = iivt_user->user_id;
+            ReadInvert(fp_ivt_item, vec_matrix_idx_user_[uid], vec_ivt_item);
+            for (iivt_item = vec_ivt_item.begin(); iivt_item != vec_ivt_item.end(); iivt_item++) {
+                int id = iivt_item->item_id;
+                vec_id_score[id].id = id;
+                vec_id_score[id].score += iivt_user->score * iivt_item->score * guassian(iivt_user->timestamp - iivt_item->timestamp);
             }
-            max = Max(max, vec_score_user_[uid]);
         }
-        for (size_t uid = 0; uid < num_user_; uid++) {
-            vec_score_user_[uid] = vec_score_user_[uid] / max;
+        for (size_t i = 0; i < vec_id_score.size(); i++) {
+            if (vec_id_score[i].id > 0)
+                vec_id_score[i].score /= por(vec_matrix_idx_item_[i].norm, lambda_);
         }
-        max = INT_MIN;
-        for (size_t pid = 0; pid < num_item_; pid++) {
-            ReadInvert(fp_ivt_user, vec_matrix_idx_item_[pid], buff_ivt);
-            vec_score_item_[pid] = 0.;
-            for (it_ivt = buff_ivt.begin(); it_ivt != buff_ivt.end(); it_ivt++) {
-                vec_score_item_[pid] +=  it_ivt->score * vec_score_user_[it_ivt->id];
-            }
-            max = Max(max, vec_score_item_[pid]);
-        }
-        for (size_t pid = 0; pid < num_item_; pid++) {
-            vec_score_item_[pid] = vec_score_item_[pid] / max;
-        }
-        // print
-        double RSE = calc_rse(vec_score_user_, vec_score_user_old);
-        printf("[%d] %.10f   (%.10f %.10f) \n", iter+1, RSE, vec_score_user_[0], vec_score_user_[num_user_-1]);
-        if (fabs(RSE - RSE_old) < stop_err_) break;
-        RSE_old = RSE;
-        for (size_t uid = 0; uid < num_user_; uid++) {
-            vec_score_user_old[uid] = vec_score_user_[uid];
-        }
+        partial_sort(vec_id_score.begin(), vec_id_score.begin() + top_reserve_, vec_id_score.end() );
+         
     }
     fclose(fp_ivt_item);
     fclose(fp_ivt_user);
     return true;
 }
 
+float BiGragh::guassian(int x) {
+    return exp(-1.0 * (x * x) / 2.0 / sigma_/sigma_);
+}
+    
 float BiGraph::calc_rse(const vector<float>& vec1, const vector<float>& vec2) {
     if (vec1.size() != vec2.size()) return -1.0;
     double sum = 0.0;

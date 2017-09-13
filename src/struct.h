@@ -64,7 +64,6 @@ struct MatrixInvert {
     double score;
 };
 
-/*
 struct tNode {
     int id;
     float score;
@@ -72,6 +71,5 @@ struct tNode {
         return (this->score > b.score);
     }
 };
-*/
 #endif
 

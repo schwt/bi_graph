@@ -33,8 +33,8 @@ private:
     size_t num_user_;
     size_t num_item_;
 
-
     //////////////////////////// Defined in config.ini ///////////////////////////////
+    int top_reserve_;
     float lambda_;
     float rho_;
     float sigam_;
@@ -54,6 +54,8 @@ private:
     bool Train();
     bool OutputBin();
     bool OutputTxt();
+    float guassian(int);
+    void normalize(vector<MatrixInvert>&, float);
 };
 
 
