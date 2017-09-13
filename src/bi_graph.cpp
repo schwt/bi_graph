@@ -17,13 +17,13 @@ bool CMP_BY_UTP(const DataNode& left, const DataNode& right) {
 }
 
 BiGraph::BiGraph() {
-    F_ivt_user_ = "../data/temp/matrix_user.ivt";
-    F_ivt_item_ = "../data/temp/matrix_item.ivt";
+    F_matrix_ivt_user_ = "../data/temp/matrix_user.ivt";
+    F_matrix_ivt_item_ = "../data/temp/matrix_item.ivt";
 }
 
 BiGraph::~BiGraph()
 {
-    cls_log_msg.log("done.")
+    cls_logger.log("done.")
 }
 
 // 初始化
@@ -32,13 +32,13 @@ bool BiGraph::Init(const char* s_f_config)
     cout << "config file path: " << s_f_config << endl;
     bool res = true;
 
-    if (!cls_log_msg.SetLogFile("./log.txt", "Spear")) return false;
+    if (!cls_logger.SetLogFile("./log.txt", "Spear")) return false;
     if (!ReadConfigFile(s_f_config))  {
-        cls_log_msg.log(__LINE__, false, "ReadConfigFile");
+        cls_logger.log(__LINE__, false, "ReadConfigFile");
         return false;
     }
     else {
-        cls_log_msg.log(__LINE__, true, "ReadConfigFile");
+        cls_logger.log(__LINE__, true, "ReadConfigFile");
     }
     return res;
 }
@@ -46,7 +46,7 @@ bool BiGraph::Init(const char* s_f_config)
 //************* 读配置文件 *************//
 bool BiGraph::ReadConfigFile(const char* s_f_config, const char* s_f_log)
 {
-    cls_log_msg.log("<<<<<<<<<<<<<<<ReadConfigFile>>>>>>>>>>>>>>>");
+    cls_logger.log("<<<<<<<<<<<<<<<ReadConfigFile>>>>>>>>>>>>>>>");
 
     Config ReadConfig(s_f_config);
 
@@ -56,7 +56,7 @@ bool BiGraph::ReadConfigFile(const char* s_f_config, const char* s_f_log)
     if (!(res = ReadConfig.ReadInto("file", "sim_item_txt",  F_output_idx_))) return res;
     if (!(res = ReadConfig.ReadInto("file", "sim_item_bin",  F_output_ivt_))) return res;
     if (!(res = ReadConfig.ReadInto("file", "user_id_map",   F_user_map_))) return res;
-    if (!(res = ReadConfig.ReadInto("file", "item_id_map",   F_item_map_))) return res;
+    if (!(res = ReadConfig.ReadInto("file", "item_id_map",   F_output_txt_))) return res;
     
     if (!(res = ReadConfig.ReadInto("data", "BUFFERCNT",   BUFFERCNT))) return res;
     if (!(res = ReadConfig.ReadInto("data", "SORTMEMSIZE", SORTMEMSIZE))) return res;
@@ -75,19 +75,15 @@ bool BiGraph::Calc()
     bool res = true;
 
     res = SourceDataManage();
-    cls_log_msg.log(__LINE__, res, "SourceDataManage");
+    cls_logger.log(__LINE__, res, "SourceDataManage");
     if (!res) return res;
 
     res = Train();
-    cls_log_msg.log(__LINE__, res, "Train");
-    if (!res) return res;
-
-    res = OutputBin();
-    cls_log_msg.log(__LINE__, res, "OutputBin");
+    cls_logger.log(__LINE__, res, "Train");
     if (!res) return res;
 
     res = OutputTxt();
-    cls_log_msg.log(__LINE__, res, "OutputTxt");
+    cls_logger.log(__LINE__, res, "OutputTxt");
     if (!res) return res;
 
     cout << endl;
@@ -97,7 +93,7 @@ bool BiGraph::Calc()
 //////////// 数据预处理 ////////////
 bool BiGraph::SourceDataManage()
 {
-    cls_log_msg.log("==================SourceDataManage==================");
+    cls_logger.log("==================SourceDataManage==================");
     bool res = true;
     
     
@@ -105,20 +101,20 @@ bool BiGraph::SourceDataManage()
     string f_temp_data_sorted = "../data/temp/data.sorted.dat";
 
     res = LoadData(f_temp_data);
-    cls_log_msg.log(__LINE__, res, "Loaddata");
+    cls_logger.log(__LINE__, res, "Loaddata");
     if (!res) return res;
 
     cout << "\nSorting by pid/score/uid..." << endl;
     if(K_MergeFile<DataNode>(f_temp_data.c_str(),
                              f_temp_data_sorted.c_str(), CMP_BY_PTU,
                              SORTMEMSIZE) == -1) res = false;
-    cls_log_msg.log(__LINE__, res, "K_MergeFile " + f_temp_data 
+    cls_logger.log(__LINE__, res, "K_MergeFile " + f_temp_data 
                                   + " to " + f_temp_data_sorted);
     if (!res) return res;
 
 
     res = MakeMatrixP2U(f_temp_data_sorted);
-    cls_log_msg.log(__LINE__, res, "MakeMatrixP2U");
+    cls_logger.log(__LINE__, res, "MakeMatrixP2U");
     if (!res) return res;
 
     cout << endl;
@@ -128,13 +124,13 @@ bool BiGraph::SourceDataManage()
     if(K_MergeFile<DataNode>(f_temp_data.c_str(),
                              f_temp_data_sorted.c_str(),
                              CMP_BY_UTP, SORTMEMSIZE) == -1) res = false;
-    cls_log_msg.log(__LINE__, res, "K_MergeFile " + f_temp_data
+    cls_logger.log(__LINE__, res, "K_MergeFile " + f_temp_data
                                   + " to " + f_temp_data_sorted);
     if (!res) return res;
 
 
     res = MakeMatrixU2P(f_temp_data_sorted);
-    cls_log_msg.log(__LINE__, res, "MakeMatrixU2P");
+    cls_logger.log(__LINE__, res, "MakeMatrixU2P");
     if (!res) return res;
 
     cout << endl;
@@ -147,7 +143,7 @@ bool BiGraph::SourceDataManage()
 // input text: "uid itemID score timestamp"
 // output bin: DataNode
 bool BiGraph::LoadData(const string& dst) {
-    cls_log_msg.log("-------------LoadData-------------");
+    cls_logger.log("-------------LoadData-------------");
     FILE *fp_dst = fopen(dst.c_str(), "wb");
     if (!fp_dst) {
         printf("error open file %s!\n", dst.c_str());
@@ -163,8 +159,9 @@ bool BiGraph::LoadData(const string& dst) {
     int mapped_uid = 0;
     int mapped_pid = 0;
     hash_map<string, int> hm_user_map;
-    hash_map<string, int> hm_item_map;
-    hash_map<string, int>::iterator ith;
+    hash_map<string, int>::iterator its;
+    hash_map<int, int> hm_item_map;
+    hash_map<int, int>::iterator iti;
 
     while (getline (fin, line)) {
         stringUtils::split(line, " ", sep_vec);
@@ -173,18 +170,18 @@ bool BiGraph::LoadData(const string& dst) {
         string user = sep_vec[0];
         string item = sep_vec[1];
 
-        ith = hm_user_map.find(user);
-        if (ith == hm_user_map.end()) {
+        its = hm_user_map.find(user);
+        if (its == hm_user_map.end()) {
             mapped_uid = hm_user_map.size();
             hm_user_map.insert(make_pair(user, mapped_uid));
         } else
-            mapped_uid = ith->second;
-        ith = hm_item_map.find(item);
-        if (ith == hm_item_map.end()) {
+            mapped_uid = its->second;
+        iti = hm_item_map.find(item);
+        if (iti == hm_item_map.end()) {
             mapped_pid = hm_item_map.size();
             hm_item_map.insert(make_pair(item, mapped_pid));
         } else
-            mapped_pid = ith->second;
+            mapped_pid = iti->second;
 
         buff[idc].user_id   = mapped_uid;
         buff[idc].item_id   = mapped_pid;
@@ -204,18 +201,18 @@ bool BiGraph::LoadData(const string& dst) {
     num_item_ = hm_item_map.size();
     num_user_ = hm_user_map.size();
 
-    vec_user_id_map_.resize(num_user_);
+    // vec_user_id_map_.resize(num_user_);
+    // for (its = hm_user_map.begin(); itm != hm_user_map.end(); itm++) {
+    //     vec_user_id_map_[itm->second] = itm->first;
+    // }
     vec_item_id_map_.resize(num_item_);
-    for (ith = hm_user_map.begin(); itm != hm_user_map.end(); itm++) {
-        vec_user_id_map_[itm->second] = itm->first;
-    }
-    for (ith = hm_item_map.begin(); itm != hm_item_map.end(); itm++) {
-        vec_item_id_map_[itm->second] = itm->first;
+    for (iti = hm_item_map.begin(); itm != hm_item_map.end(); itm++) {
+        vec_item_id_map_[itm->second] = atoi(itm->first);
     }
 
-    cls_log_msg.log("# user count: %ld\n", num_user_);
-    cls_log_msg.log("# item count: %ld\n", num_item_);
-    cls_log_msg.log("# input data: %d\n", cnt);
+    cls_logger.log("# user count: %ld\n", num_user_);
+    cls_logger.log("# item count: %ld\n", num_item_);
+    cls_logger.log("# input data: %d\n", cnt);
     return true;
 }
 
@@ -229,7 +226,7 @@ void BiGraph::normalize(vector<MatrixInvert>& vec, float norm) {
 // input  bin: DataNode(sorted)
 // output bin: idx, ivt
 bool BiGraph::MakeMatrixU2P(const string& f_src) {
-    cls_log_msg.log("-------------MakeMatrixU2P-------------");
+    cls_logger.log("-------------MakeMatrixU2P-------------");
     FILE* fp_src = fopen(f_src.c_str(), "rb");
     FILE* fp_ivt= fopen(F_matrix_ivt_item_.c_str(), "wb");
     int from = 0;
@@ -311,7 +308,7 @@ bool BiGraph::MakeMatrixU2P(const string& f_src) {
 // input  bin: DataNode(sorted)
 // output bin: idx, ivt
 bool BiGraph::MakeMatrixP2U(const string& f_src) {
-    cls_log_msg.log("-------------MakeMatrixP2U-------------");
+    cls_logger.log("-------------MakeMatrixP2U-------------");
     FILE* fp_src = fopen(f_src.c_str(), "rb");
     FILE* fp_ivt= fopen(F_matrix_ivt_user_.c_str(), "wb");
     int from = 0;
@@ -383,7 +380,7 @@ bool BiGraph::MakeMatrixP2U(const string& f_src) {
 }
 
 bool BiGraph::Train() {
-    cls_log_msg.log("-------------Train-------------");
+    cls_logger.log("-------------Train-------------");
     FILE* fp_ivt_item =  fopen(F_matrix_ivt_item_.c_str(),  "rb");
     FILE* fp_ivt_user =  fopen(F_matrix_ivt_user_.c_str(),  "rb");
     FILE* fp_output_ivt =  fopen(F_output_ivt_.c_str(),  "wb");
@@ -393,34 +390,53 @@ bool BiGraph::Train() {
     vector<MatrixInvert> vec_ivt_item;
     vector<MatrixInvert>::iterator iivt_user;
     vector<MatrixInvert>::iterator iivt_item;
-    tNode ini_node;
-    ini_node.id = -1, ini_node.score = -1.0;
-    vector<tNode> vec_id_score;
-
-    vec_id_score.resize(num_item_, ini_node);
+    vector<SimIndex> vec_output_idx(num_item_);
+    vector<SimInvert> vec_ivt_score(num_item_);
+    SimInvert ini_node;
+    int from = 0;
+    ini_node.score = 0.0;
 
     for (size_t pid = 0; pid < num_item_; pid ++) {
-        vec_id_score.assign(num_item_, ini_node);
+        vec_ivt_score.assign(num_item_, ini_node);
         ReadInvert(fp_ivt_item, vec_matrix_idx_item_[pid], vec_ivt_user);
         for (iivt_user = vec_ivt_user.begin(); iivt_user != vec_ivt_user.end(); iivt_user++) {
             int uid = iivt_user->user_id;
             ReadInvert(fp_ivt_item, vec_matrix_idx_user_[uid], vec_ivt_item);
             for (iivt_item = vec_ivt_item.begin(); iivt_item != vec_ivt_item.end(); iivt_item++) {
-                int id = iivt_item->item_id;
-                vec_id_score[id].id = id;
-                vec_id_score[id].score += iivt_user->score * iivt_item->score * guassian(iivt_user->timestamp - iivt_item->timestamp);
+                vec_ivt_score[iivt_item->item_id].score += iivt_user->score * iivt_item->score * guassian(iivt_user->timestamp - iivt_item->timestamp);
             }
         }
-        for (size_t i = 0; i < vec_id_score.size(); i++) {
-            if (vec_id_score[i].id > 0)
-                vec_id_score[i].score /= por(vec_matrix_idx_item_[i].norm, lambda_);
+        float sum = 0.0;
+        for (size_t i = 0; i < vec_ivt_score.size(); i++) {
+            if (vec_ivt_score[i].score > 0.0) {
+                vec_ivt_score[i].score /= pow(vec_matrix_idx_item_[i].norm, lambda_);
+                vec_ivt_score[i].id = vec_item_id_map_[i];
+                sum += vec_ivt_score[i].score;
+            }
         }
-        partial_sort(vec_id_score.begin(), vec_id_score.begin() + top_reserve_, vec_id_score.end() );
-         
+        partial_sort(vec_ivt_score.begin(), vec_ivt_score.begin() + top_reserve_, vec_ivt_score.end() );
+        int count = top_reserve_;
+        for (int i = 0; i < top_reserve_; i++) {
+            if (vec_ivt_score[i].score <= 0.0) {
+                count = i;
+                break;
+        }
+        vec_output_idx[pid].id     = vec_item_id_map_[i];
+        vec_output_idx[pid].norm   = sum;
+        vec_output_idx[pid].count  = count;
+        vec_output_idx[pid].offset = (long long)from * sizeof(SimInvert);
+        fwrite(&vec_ivt_score[0], sizeof(SimInvert), count, fp_output_ivt);
     }
     fclose(fp_ivt_item);
     fclose(fp_ivt_user);
-    return true;
+    fclose(fp_output_ivt); 
+    FILE* fp_output_idx  = fopen(F_output_idx_.c_str(),  "wb");
+    fwrite(&vec_output_idx[0], sizeof(SimIndex), num_item_, fp_output_idx);
+    fclose(fp_output_idx); 
+
+    bool res = IdxIvtCheck<SimIndex, SimInvert>(F_output_idx_, F_output_ivt_);
+    if (!res) cls_logger.log("check idx-ivt ERROR!");
+    return res;
 }
 
 float BiGragh::guassian(int x) {
@@ -436,68 +452,27 @@ float BiGraph::calc_rse(const vector<float>& vec1, const vector<float>& vec2) {
     return sqrt(sum);
 }
 
-bool BiGraph::WriteScore() {
-    cls_log_msg.log("-------------WriteScore-------------");
-    FILE *fp_user = fopen(F_score_user_.c_str(), "w");
-    FILE *fp_item = fopen(F_score_item_.c_str(), "w");
-    if (!fp_user || !fp_item) {
-        printf("ERROR open files!\n");
+bool BiGraph::OutputTxt() {
+    cls_logger.log("-------------OutputTxt-------------");
+    FILE *fp_ivt = fopen(F_output_ivt_.c_str(), "rb");
+    FILE *fp_txt = fopen(F_output_txt_.c_str(), "w");
+    if (!fp_ivt || !fp_txt) {
+        cls_logger.log(__LINE__, false, "ERROR open files!\n");
         return false;
     }
-    vector<tNode> vec_buff(num_user_);
-    for (size_t uid = 0; uid < num_user_; uid++)
-        fprintf(fp_user, "%d\t%f\n", vec_uid_[uid], vec_score_user_[uid]);
-    for (size_t pid = 0; pid < num_item_; pid++)
-        fprintf(fp_item, "%d\t%f\n", vec_pid_[pid], vec_score_item_[pid]);
-    fclose(fp_user);
-    fclose(fp_item);
+    vector<SimIndex>  vec_idx;
+    vector<SimInvert> vec_ivt;
+    LoadIndex_vector(F_output_idx_, vec_idx);
+    for (size_t i = 0; i < vec_idx.size(); i++) {
+        fprintf(fp_txt, "[%d]\tmainID=%d\tnorm=%f\tcount=%d\toffset=%ld\n", 
+                i, vec_idx[i].id, vec_idx[i].norm, vec_idx[i].count, vec_idx[i].offset);
+        ReadInvert(fp_ivt, vec_idx[pid], vec_ivt);
+        for (size_t j = 0; j < vec_ivt.size(); j++) {
+            fprintf(fp_txt, "\t[%d]\tid=%d\tscore=%f\n", vec_ivt[j].id, vec_ivt[j].score);
+        }
+    }
+    fclose(fp_ivt);
+    fclose(fp_txt);
     return true;
 }
-
-bool BiGraph::WriteTopUser() {
-    cls_log_msg.log("-------------WriteTopUser-------------");
-    
-    vector<tNode> vec_buff;
-    vec_buff.resize(num_user_);
-    for (size_t i = 0; i < num_user_; i++) {
-        vec_buff[i].id = vec_uid_[i];
-        vec_buff[i].score = vec_score_user_[i];
-    }
-    sort(vec_buff.begin(), vec_buff.end());
-
-    FILE* fp_dst = fopen(F_top_user_.c_str(), "w");
-    if (!fp_dst) {
-        printf("ERROR open file: %s\n", F_top_user_.c_str());
-        return false;
-    }
-    for (size_t i = 0; i < Min(top_num_, num_user_); i++) {
-        fprintf(fp_dst, "%d\t%.10f\n", vec_buff[i].id, vec_buff[i].score);
-    }
-    fclose(fp_dst);
-    return true;
-}
-
-bool BiGraph::WriteTopItem() {
-    cls_log_msg.log("-------------WriteTopItem-------------");
-    
-    vector<tNode> vec_buff;
-    vec_buff.resize(num_item_);
-    for (size_t i = 0; i < num_item_; i++) {
-        vec_buff[i].id = vec_pid_[i];
-        vec_buff[i].score = vec_score_item_[i];
-    }
-    sort(vec_buff.begin(), vec_buff.end());
-
-    FILE* fp_dst = fopen(F_top_item_.c_str(), "w");
-    if (!fp_dst) {
-        printf("ERROR open file: %s\n", F_top_item_.c_str());
-        return false;
-    }
-    for (size_t i = 0; i < Min(top_num_, num_item_); i++) {
-        fprintf(fp_dst, "%d\t%.10f\n", vec_buff[i].id, vec_buff[i].score);
-    }
-    fclose(fp_dst);
-    return true;
-}
-
 

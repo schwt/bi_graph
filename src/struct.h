@@ -61,15 +61,22 @@ struct MatrixIndex {
 struct MatrixInvert {
     int id;
     int timestamp;
-    double score;
+    float score;
 };
 
-struct tNode {
+struct SimIndex {
+    int id;
+    float norm;
+    int count;
+    long long offset;
+};
+struct SimInvert {
     int id;
     float score;
-    bool operator < (const struct tNode& b) const {
+    bool operator < (const struct SimInvert& b) const {
         return (this->score > b.score);
     }
 };
+
 #endif
 

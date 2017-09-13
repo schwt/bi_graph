@@ -13,20 +13,22 @@ public:
 private:
     bool ReadConfigFile(const char* cstr_config_file, const char* cstr_log_file);
 private:
-    Logger cls_log_msg;         // 日志对象
+    Logger cls_logger;
 
     //////////////////////////// new ///////////////////////////////
     // files
     string F_train_data_;
     string F_output_idx_;
     string F_output_ivt_;
-    string F_user_map_;
+    string F_output_txt_;
+    // string F_user_map_;
     // tmp file
-    string F_ivt_user_;
-    string F_ivt_item_;
+    string F_matrix_ivt_user_;
+    string F_matrix_ivt_item_;
 
-    vector<string> vec_user_id_map_;
-    vector<string> vec_item_id_map_;
+    // vector<string> vec_user_id_map_;
+    // vector<string> vec_item_id_map_;
+    vector<int> vec_item_id_map_;
 
     vector<MatrixIndex> vec_matrix_idx_user_;
     vector<MatrixIndex> vec_matrix_idx_item_;
@@ -52,7 +54,6 @@ private:
     bool MakeMatrixP2U(const string&);
     bool MakeMatrixU2P(const string&);
     bool Train();
-    bool OutputBin();
     bool OutputTxt();
     float guassian(int);
     void normalize(vector<MatrixInvert>&, float);
