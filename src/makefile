@@ -6,11 +6,11 @@ CFLAGS  = -Wall -O2 -D_FILE_OFFSET_BITS=64
 CXXFLAGS = -Wall -O2 -D_FILE_OFFSET_BITS=64 -DSIZEOF_LONG_INT=8 -Wno-deprecated
 LDFLAGS = 
 
-TARGET = spear
+TARGET = graph 
 
 all: $(TARGET)
 
-spear: bi_graph.o main.o
+graph: bi_graph.o main.o
 	$(CXX) -o $@ $^ $(LDFLAGS) $(LIB)
 
 %.o : %.cpp

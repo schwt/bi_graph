@@ -32,7 +32,7 @@
 #include "../../clib/ReadStructFile.h"   // µ¹ÅÅË÷Òý
 #include "../../clib/MyGloble.h"
 #include "../../clib/Logger.h"
-#include "../../clib/stringUtils.h"
+// #include "../../clib/stringUtils.h"
 
 using namespace std;
 

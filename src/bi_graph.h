@@ -11,7 +11,7 @@ public:
     bool Calc();
 
 private:
-    bool ReadConfigFile(const char* cstr_config_file, const char* cstr_log_file);
+    bool ReadConfigFile(string file_config);
 private:
     Logger cls_logger;
 
@@ -39,7 +39,7 @@ private:
     int top_reserve_;
     float lambda_;
     float rho_;
-    float sigam_;
+    float sigma_;
 
     int BUFFERCNT;
     int SORTMEMSIZE;

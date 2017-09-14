@@ -12,12 +12,12 @@ int main(int argc, char* argv[])
     CTimer timer;
     timer.StartTiming();
 
-    CSpear g_obj_spear;
+    BiGraph obj_bi_graph;
 
-    b_rt = g_obj_spear.Init(argv[1]);
+    b_rt = obj_bi_graph.Init(argv[1]);
     if (!b_rt) return -1;
     
-    b_rt = g_obj_spear.Calc();
+    b_rt = obj_bi_graph.Calc();
     if (!b_rt) return -1;
     timer.EndTiming();
     timer.OutPutTimeSpan();

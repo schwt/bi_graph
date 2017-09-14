@@ -23,7 +23,7 @@ BiGraph::BiGraph() {
 
 BiGraph::~BiGraph()
 {
-    cls_logger.log("done.")
+    cls_logger.log("done.");
 }
 
 // 初始化
@@ -44,7 +44,7 @@ bool BiGraph::Init(const char* s_f_config)
 }
 
 //************* 读配置文件 *************//
-bool BiGraph::ReadConfigFile(const char* s_f_config, const char* s_f_log)
+bool BiGraph::ReadConfigFile(string s_f_config)
 {
     cls_logger.log("<<<<<<<<<<<<<<<ReadConfigFile>>>>>>>>>>>>>>>");
 
@@ -53,10 +53,8 @@ bool BiGraph::ReadConfigFile(const char* s_f_config, const char* s_f_log)
     bool res = true;
 
     if (!(res = ReadConfig.ReadInto("file", "train_data",  F_train_data_))) return res;
-    if (!(res = ReadConfig.ReadInto("file", "sim_item_txt",  F_output_idx_))) return res;
     if (!(res = ReadConfig.ReadInto("file", "sim_item_bin",  F_output_ivt_))) return res;
-    if (!(res = ReadConfig.ReadInto("file", "user_id_map",   F_user_map_))) return res;
-    if (!(res = ReadConfig.ReadInto("file", "item_id_map",   F_output_txt_))) return res;
+    if (!(res = ReadConfig.ReadInto("file", "sim_item_txt",  F_output_txt_))) return res;
     
     if (!(res = ReadConfig.ReadInto("data", "BUFFERCNT",   BUFFERCNT))) return res;
     if (!(res = ReadConfig.ReadInto("data", "SORTMEMSIZE", SORTMEMSIZE))) return res;
@@ -166,9 +164,9 @@ bool BiGraph::LoadData(const string& dst) {
     while (getline (fin, line)) {
         stringUtils::split(line, " ", sep_vec);
         if (sep_vec.size() != 4) continue;
-        if (atof(vec[2].c_str() ) <= 0.0) continue;
+        if (atof(sep_vec[2].c_str() ) <= 0.0) continue;
         string user = sep_vec[0];
-        string item = sep_vec[1];
+        int item = atoi(sep_vec[1].c_str());
 
         its = hm_user_map.find(user);
         if (its == hm_user_map.end()) {
@@ -185,8 +183,8 @@ bool BiGraph::LoadData(const string& dst) {
 
         buff[idc].user_id   = mapped_uid;
         buff[idc].item_id   = mapped_pid;
-        buff[idc].score     = atof(vec[2].c_str());
-        buff[idc].timestamp = atoi(vec[3].c_str());
+        buff[idc].score     = atof(sep_vec[2].c_str());
+        buff[idc].timestamp = atoi(sep_vec[3].c_str());
         cnt++;
 
         if (++idc >= BUFFERCNT) {
@@ -201,24 +199,20 @@ bool BiGraph::LoadData(const string& dst) {
     num_item_ = hm_item_map.size();
     num_user_ = hm_user_map.size();
 
-    // vec_user_id_map_.resize(num_user_);
-    // for (its = hm_user_map.begin(); itm != hm_user_map.end(); itm++) {
-    //     vec_user_id_map_[itm->second] = itm->first;
-    // }
     vec_item_id_map_.resize(num_item_);
-    for (iti = hm_item_map.begin(); itm != hm_item_map.end(); itm++) {
-        vec_item_id_map_[itm->second] = atoi(itm->first);
+    for (iti = hm_item_map.begin(); iti != hm_item_map.end(); iti++) {
+        vec_item_id_map_[iti->second] = iti->first;
     }
 
-    cls_logger.log("# user count: %ld\n", num_user_);
-    cls_logger.log("# item count: %ld\n", num_item_);
-    cls_logger.log("# input data: %d\n", cnt);
+    cls_logger.log("# user count: " + stringUtils::asString(num_user_));
+    // cls_logger.log("# item count: " + stringUtils::asString(num_item_));
+    // cls_logger.log("# input data: " + stringUtils::asString(cnt));
     return true;
 }
 
 void BiGraph::normalize(vector<MatrixInvert>& vec, float norm) {
-    for (size_t i = 0; i < vec_invert_buf.size(); i++) {
-        vec_invert_buf[i].score /= norm;
+    for (size_t i = 0; i < vec.size(); i++) {
+        vec[i].score /= norm;
     }
 }
     
@@ -350,7 +344,6 @@ bool BiGraph::MakeMatrixP2U(const string& f_src) {
                 pid_old = readbuf[i].item_id;
                 from   += strt_index.count;
                 norm = 0.0;
-                }
             }
             strt_invert.id        = readbuf[i].user_id;
             strt_invert.score     = readbuf[i].score;
@@ -400,10 +393,10 @@ bool BiGraph::Train() {
         vec_ivt_score.assign(num_item_, ini_node);
         ReadInvert(fp_ivt_item, vec_matrix_idx_item_[pid], vec_ivt_user);
         for (iivt_user = vec_ivt_user.begin(); iivt_user != vec_ivt_user.end(); iivt_user++) {
-            int uid = iivt_user->user_id;
+            int uid = iivt_user->id;
             ReadInvert(fp_ivt_item, vec_matrix_idx_user_[uid], vec_ivt_item);
             for (iivt_item = vec_ivt_item.begin(); iivt_item != vec_ivt_item.end(); iivt_item++) {
-                vec_ivt_score[iivt_item->item_id].score += iivt_user->score * iivt_item->score * guassian(iivt_user->timestamp - iivt_item->timestamp);
+                vec_ivt_score[iivt_item->id].score += iivt_user->score * iivt_item->score * guassian(iivt_user->timestamp - iivt_item->timestamp);
             }
         }
         float sum = 0.0;
@@ -420,8 +413,9 @@ bool BiGraph::Train() {
             if (vec_ivt_score[i].score <= 0.0) {
                 count = i;
                 break;
+            }
         }
-        vec_output_idx[pid].id     = vec_item_id_map_[i];
+        vec_output_idx[pid].id     = vec_item_id_map_[pid];
         vec_output_idx[pid].norm   = sum;
         vec_output_idx[pid].count  = count;
         vec_output_idx[pid].offset = (long long)from * sizeof(SimInvert);
@@ -439,19 +433,10 @@ bool BiGraph::Train() {
     return res;
 }
 
-float BiGragh::guassian(int x) {
+float BiGraph::guassian(int x) {
     return exp(-1.0 * (x * x) / 2.0 / sigma_/sigma_);
 }
     
-float BiGraph::calc_rse(const vector<float>& vec1, const vector<float>& vec2) {
-    if (vec1.size() != vec2.size()) return -1.0;
-    double sum = 0.0;
-    for (size_t i = 0; i < vec1.size(); i++) {
-        sum += (vec1[i] - vec2[i]) * (vec1[i] - vec2[i]);
-    }
-    return sqrt(sum);
-}
-
 bool BiGraph::OutputTxt() {
     cls_logger.log("-------------OutputTxt-------------");
     FILE *fp_ivt = fopen(F_output_ivt_.c_str(), "rb");
@@ -462,13 +447,14 @@ bool BiGraph::OutputTxt() {
     }
     vector<SimIndex>  vec_idx;
     vector<SimInvert> vec_ivt;
-    LoadIndex_vector(F_output_idx_, vec_idx);
+    LoadIndex_Vector(F_output_idx_, vec_idx);
     for (size_t i = 0; i < vec_idx.size(); i++) {
-        fprintf(fp_txt, "[%d]\tmainID=%d\tnorm=%f\tcount=%d\toffset=%ld\n", 
+        fprintf(fp_txt, "[%ld]\tmainID=%d\tnorm=%f\tcount=%d\toffset=%lld\n", 
                 i, vec_idx[i].id, vec_idx[i].norm, vec_idx[i].count, vec_idx[i].offset);
-        ReadInvert(fp_ivt, vec_idx[pid], vec_ivt);
+        ReadInvert(fp_ivt, vec_idx[i], vec_ivt);
         for (size_t j = 0; j < vec_ivt.size(); j++) {
-            fprintf(fp_txt, "\t[%d]\tid=%d\tscore=%f\n", vec_ivt[j].id, vec_ivt[j].score);
+            fprintf(fp_txt, "\t[%ld]\tid=%d\tscore=%f\n", 
+                    j, vec_ivt[j].id, vec_ivt[j].score);
         }
     }
     fclose(fp_ivt);
