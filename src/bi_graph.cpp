@@ -2,6 +2,8 @@
 #include <cmath>
 #include "bi_graph.h"
 
+// #define DEBUG
+
 #define Min(a, b) ( (a)<(b) ? (a):(b) )
 #define Max(a, b) ( (a)>(b) ? (a):(b) )
 
@@ -53,7 +55,8 @@ bool BiGraph::ReadConfigFile(string s_f_config)
     bool res = true;
 
     if (!(res = ReadConfig.ReadInto("file", "train_data",  F_train_data_))) return res;
-    if (!(res = ReadConfig.ReadInto("file", "sim_item_bin",  F_output_ivt_))) return res;
+    if (!(res = ReadConfig.ReadInto("file", "sim_item_idx",  F_output_idx_))) return res;
+    if (!(res = ReadConfig.ReadInto("file", "sim_item_ivt",  F_output_ivt_))) return res;
     if (!(res = ReadConfig.ReadInto("file", "sim_item_txt",  F_output_txt_))) return res;
     
     if (!(res = ReadConfig.ReadInto("data", "BUFFERCNT",   BUFFERCNT))) return res;
@@ -64,6 +67,15 @@ bool BiGraph::ReadConfigFile(string s_f_config)
     if (!(res = ReadConfig.ReadInto("data", "sigma",  sigma_))) return res;
     if (!(res = ReadConfig.ReadInto("data", "top_reserve", top_reserve_))) return res;
     
+    cls_logger.log("train_data: " + F_train_data_);
+    cls_logger.log("sim_item_bin: " +  F_output_ivt_);
+    cls_logger.log("sim_item_txt: " +  F_output_txt_);
+    cls_logger.log("BUFFERCNT: " + stringUtils::asString(BUFFERCNT));
+    cls_logger.log("SORTMEMSIZE: " + stringUtils::asString(SORTMEMSIZE));
+    cls_logger.log("lambda: " + stringUtils::asString(lambda_));
+    cls_logger.log("rho: " + stringUtils::asString(rho_));
+    cls_logger.log("sigma: " + stringUtils::asString(sigma_));
+    cls_logger.log("top_reserve: " + stringUtils::asString(top_reserve_));
     return res;
 }
 
@@ -132,8 +144,8 @@ bool BiGraph::SourceDataManage()
     if (!res) return res;
 
     cout << endl;
-    RemoveFile(f_temp_data);
-    RemoveFile(f_temp_data_sorted);
+    // RemoveFile(f_temp_data);
+    // RemoveFile(f_temp_data_sorted);
 
     return res;
 }
@@ -205,14 +217,14 @@ bool BiGraph::LoadData(const string& dst) {
     }
 
     cls_logger.log("# user count: " + stringUtils::asString(num_user_));
-    // cls_logger.log("# item count: " + stringUtils::asString(num_item_));
-    // cls_logger.log("# input data: " + stringUtils::asString(cnt));
+    cls_logger.log("# item count: " + stringUtils::asString(num_item_));
+    cls_logger.log("# input data: " + stringUtils::asString(cnt));
     return true;
 }
 
 void BiGraph::normalize(vector<MatrixInvert>& vec, float norm) {
     for (size_t i = 0; i < vec.size(); i++) {
-        vec[i].score /= norm;
+        vec[i].score /= pow(norm, rho_);
     }
 }
     
@@ -239,6 +251,7 @@ bool BiGraph::MakeMatrixU2P(const string& f_src) {
     strt_invert.score     = node.score;
     strt_invert.timestamp = node.timestamp;
     vec_invert_buf.push_back(strt_invert);
+    norm += node.score;
     struct DataNode* readbuf = new struct DataNode[BUFFERCNT];
     if (!CheckMemAlloc(readbuf, BUFFERCNT)) {
         printf("error allocate mem!\n");
@@ -251,25 +264,18 @@ bool BiGraph::MakeMatrixU2P(const string& f_src) {
 
         for (int i = 0; i < size; ++i) {
             if (uid_old != readbuf[i].user_id) {
-                if (norm > 0.0) {
-                    strt_index.norm   = norm;
-                    strt_index.count  = (int)vec_invert_buf.size();
-                    strt_index.offset = (long long)from * sizeof(MatrixInvert);
+                strt_index.norm   = norm;
+                strt_index.count  = (int)vec_invert_buf.size();
+                strt_index.offset = (long long)from * sizeof(MatrixInvert);
 
-                    vec_matrix_idx_user_[uid_old] = strt_index;
-                    normalize(vec_invert_buf, norm);
-                    fwrite(&vec_invert_buf[0], sizeof(MatrixInvert), strt_index.count, fp_ivt);
+                vec_matrix_idx_user_[uid_old] = strt_index;
+                normalize(vec_invert_buf, norm);
+                fwrite(&vec_invert_buf[0], sizeof(MatrixInvert), strt_index.count, fp_ivt);
 
-                    vec_invert_buf.clear();
-                    uid_old = readbuf[i].user_id;
-                    from   += strt_index.count;
-                    norm = 0.0;
-                } else {
-                    vec_invert_buf.clear();
-                    uid_old = readbuf[i].user_id;
-                    norm = 0;
-                    printf("error norm: %f  (user: %d)", norm, uid_old);
-                }
+                vec_invert_buf.clear();
+                uid_old = readbuf[i].user_id;
+                from   += strt_index.count;
+                norm = 0.0;
             }
             strt_invert.id        = readbuf[i].item_id;
             strt_invert.score     = readbuf[i].score;
@@ -295,6 +301,7 @@ bool BiGraph::MakeMatrixU2P(const string& f_src) {
     bool res = IdxIvtCheck<MatrixIndex, MatrixInvert>(vec_matrix_idx_user_, F_matrix_ivt_item_);
     if (!res) printf("Check Invert: Error!\n");
 
+    cls_logger.log("user idx: " + stringUtils::asString(vec_matrix_idx_user_.size()));
     return res;
 }
 
@@ -321,6 +328,7 @@ bool BiGraph::MakeMatrixP2U(const string& f_src) {
     strt_invert.score     = node.score;
     strt_invert.timestamp = node.timestamp;
     vec_invert_buf.push_back(strt_invert);
+    norm += node.score;
     struct DataNode* readbuf = new struct DataNode[BUFFERCNT];
     if (!CheckMemAlloc(readbuf, BUFFERCNT)) {
         printf("error allocate mem!\n");
@@ -368,14 +376,28 @@ bool BiGraph::MakeMatrixP2U(const string& f_src) {
     fclose(fp_ivt);
     bool res = IdxIvtCheck<MatrixIndex, MatrixInvert>(vec_matrix_idx_item_, F_matrix_ivt_user_);
     if (!res) printf("Check Invert: Error!\n");
-
+    cls_logger.log("item idx: " + stringUtils::asString(vec_matrix_idx_item_.size()));
     return res;
 }
 
+void pidx(string s, int i, MatrixIndex node) {
+#ifdef DEBUG
+    printf("%sid------%d\n", s.c_str(), i);
+    printf("%snorm  : %.1f\n", s.c_str(), node.norm);
+    printf("%scount : %d\n", s.c_str(), node.count);
+    printf("%soffset: %lld\n", s.c_str(), node.offset);
+#endif
+}
+void pivt(string s, MatrixInvert node) {
+#ifdef DEBUG
+    printf("%sid-----%d\n", s.c_str(), node.id);
+    printf("%sscore: %.1f\n", s.c_str(), node.score);
+#endif
+}
 bool BiGraph::Train() {
     cls_logger.log("-------------Train-------------");
-    FILE* fp_ivt_item =  fopen(F_matrix_ivt_item_.c_str(),  "rb");
     FILE* fp_ivt_user =  fopen(F_matrix_ivt_user_.c_str(),  "rb");
+    FILE* fp_ivt_item =  fopen(F_matrix_ivt_item_.c_str(),  "rb");
     FILE* fp_output_ivt =  fopen(F_output_ivt_.c_str(),  "wb");
     if (!fp_ivt_item || !fp_ivt_user) { printf("ERROR open file!\n"); return false;}
      
@@ -391,11 +413,15 @@ bool BiGraph::Train() {
 
     for (size_t pid = 0; pid < num_item_; pid ++) {
         vec_ivt_score.assign(num_item_, ini_node);
-        ReadInvert(fp_ivt_item, vec_matrix_idx_item_[pid], vec_ivt_user);
+        ReadInvert(fp_ivt_user, vec_matrix_idx_item_[pid], vec_ivt_user);
+        pidx("==", pid, vec_matrix_idx_item_[pid]);
         for (iivt_user = vec_ivt_user.begin(); iivt_user != vec_ivt_user.end(); iivt_user++) {
-            int uid = iivt_user->id;
-            ReadInvert(fp_ivt_item, vec_matrix_idx_user_[uid], vec_ivt_item);
+
+            pivt("|  ", *iivt_user);
+            pidx("|  |  ", iivt_user->id, vec_matrix_idx_user_[iivt_user->id]);
+            ReadInvert(fp_ivt_item, vec_matrix_idx_user_[iivt_user->id], vec_ivt_item);
             for (iivt_item = vec_ivt_item.begin(); iivt_item != vec_ivt_item.end(); iivt_item++) {
+            pivt("|  |  |   ", *iivt_item);
                 vec_ivt_score[iivt_item->id].score += iivt_user->score * iivt_item->score * guassian(iivt_user->timestamp - iivt_item->timestamp);
             }
         }
@@ -407,9 +433,11 @@ bool BiGraph::Train() {
                 sum += vec_ivt_score[i].score;
             }
         }
-        partial_sort(vec_ivt_score.begin(), vec_ivt_score.begin() + top_reserve_, vec_ivt_score.end() );
-        int count = top_reserve_;
-        for (int i = 0; i < top_reserve_; i++) {
+        vec_ivt_score[pid].score = 0.0;
+        int limit_len =  Min(top_reserve_, (int)vec_ivt_score.size());
+        partial_sort(vec_ivt_score.begin(), vec_ivt_score.begin() + limit_len, vec_ivt_score.end() );
+        int count = limit_len;
+        for (int i = 0; i < limit_len; i++) {
             if (vec_ivt_score[i].score <= 0.0) {
                 count = i;
                 break;
@@ -420,12 +448,18 @@ bool BiGraph::Train() {
         vec_output_idx[pid].count  = count;
         vec_output_idx[pid].offset = (long long)from * sizeof(SimInvert);
         fwrite(&vec_ivt_score[0], sizeof(SimInvert), count, fp_output_ivt);
+        from += vec_output_idx[pid].count;
     }
     fclose(fp_ivt_item);
     fclose(fp_ivt_user);
     fclose(fp_output_ivt); 
     FILE* fp_output_idx  = fopen(F_output_idx_.c_str(),  "wb");
+    if (!fp_output_idx) {
+        cls_logger.log("error open file " + F_output_idx_);
+        return false;
+    }
     fwrite(&vec_output_idx[0], sizeof(SimIndex), num_item_, fp_output_idx);
+
     fclose(fp_output_idx); 
 
     bool res = IdxIvtCheck<SimIndex, SimInvert>(F_output_idx_, F_output_ivt_);

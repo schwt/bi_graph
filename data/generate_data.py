@@ -9,9 +9,9 @@ import sys
 import random as rd
 
 output = "train.txt"
-data_num = 1000000
-max_uid = 10000
-max_pid = 1000
+data_num = 10000000
+max_uid  = 100000
+max_pid  = 10000
 max_score = 5
 time_from = 1483200000
 time_to   = 1505282614
@@ -27,7 +27,7 @@ def main():
     if num > 1000000:
         print "it may use several minutes..."
     for x in xrange(num):
-        wf.write("%d %d %d %s\n" % (rd.randint(0, max_uid), rd.randint(0, max_pid), rd.randint(1, max_score), rd.randint(time_from, time_to) ))
+        wf.write("%d %d %d %s\n" % (rd.randint(1, max_uid), rd.randint(1, max_pid), rd.randint(1, max_score), rd.randint(time_from, time_to) ))
     wf.close()
     print "done."
 
