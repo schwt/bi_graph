@@ -34,7 +34,7 @@ bool BiGraph::Init(const char* s_f_config)
     cout << "config file path: " << s_f_config << endl;
     bool res = true;
 
-    if (!cls_logger.SetLogFile("./log.txt", "Spear")) return false;
+    if (!cls_logger.SetLogFile("./log.txt", "Bi_Graph")) return false;
     if (!ReadConfigFile(s_f_config))  {
         cls_logger.log(__LINE__, false, "ReadConfigFile");
         return false;
