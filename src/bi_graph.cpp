@@ -165,6 +165,7 @@ bool BiGraph::SourceDataManage()
 // output bin: DataNode
 bool BiGraph::LoadData(const string& dst) {
     cls_logger.log("-------------LoadData-------------");
+    printf("load data from file: %s\n", dst.c_str());
     FILE *fp_dst = fopen(dst.c_str(), "wb");
     if (!fp_dst) {
         printf("error open file %s!\n", dst.c_str());
@@ -185,7 +186,7 @@ bool BiGraph::LoadData(const string& dst) {
 
     ifstream fin(F_train_data_.c_str());
     while (getline (fin, line)) {
-        stringUtils::split(line, " ", sep_vec);
+        stringUtils::split(line, "\t", sep_vec);
         if (sep_vec.size() != 4) continue;
         if (atof(sep_vec[2].c_str() ) <= 0.0) continue;
         string user = sep_vec[0];
@@ -236,6 +237,7 @@ bool BiGraph::LoadData(const string& dst) {
 // output bin: DataNode
 bool BiGraph::LoadMultiData(const string& dst) {
     cls_logger.log("-------------LoadData-------------");
+    printf("load data from path: %s\n", dst.c_str());
     FILE *fp_dst = fopen(dst.c_str(), "wb");
     if (!fp_dst) {
         printf("error open file %s!\n", dst.c_str());
@@ -255,7 +257,9 @@ bool BiGraph::LoadMultiData(const string& dst) {
     hash_map<int, int>::iterator iti;
 
     vector<string> vec_files = GetAllFiles(F_train_data_);
+    printf("files:\n");
     for (size_t f = 0; f < vec_files.size(); f++) {
+        printf("\t%s\n", vec_files[f].c_str());
         ifstream fin((F_train_data_ + "/" + vec_files[f]).c_str());
         while (getline (fin, line)) {
             stringUtils::split(line, "\t", sep_vec);
@@ -568,6 +572,35 @@ bool BiGraph::OutputTxt() {
     vector<SimInvert> vec_ivt;
     LoadIndex_Vector(F_output_idx_, vec_idx);
     for (size_t i = 0; i < vec_idx.size(); i++) {
+        fprintf(fp_txt, "%d\t", vec_idx[i].id);
+        ReadInvert(fp_ivt, vec_idx[i], vec_ivt);
+        float max_score = vec_ivt[0].score + 0.1;
+        for (size_t j = 0; j < vec_ivt.size(); j++) {
+            fprintf(fp_txt, "%d:%f", vec_ivt[j].id, max_score - vec_ivt[j].score);
+            if (j != vec_idx.size() -1) {
+                fprintf(fp_txt, ",");
+            }
+        }
+        if (i != vec_idx.size()-1) {
+            fprintf(fp_txt, "\n");
+        }
+    }
+    fclose(fp_ivt);
+    fclose(fp_txt);
+    return true;
+}
+bool BiGraph::OutputTxtFormat() {
+    cls_logger.log("-------------OutputTxtFormat-------------");
+    FILE *fp_ivt = fopen(F_output_ivt_.c_str(), "rb");
+    FILE *fp_txt = fopen(F_output_txt_.c_str(), "w");
+    if (!fp_ivt || !fp_txt) {
+        cls_logger.log(__LINE__, false, "ERROR open files!\n");
+        return false;
+    }
+    vector<SimIndex>  vec_idx;
+    vector<SimInvert> vec_ivt;
+    LoadIndex_Vector(F_output_idx_, vec_idx);
+    for (size_t i = 0; i < vec_idx.size(); i++) {
         fprintf(fp_txt, "[%ld]\tmainID=%d\tnorm=%f\tcount=%d\toffset=%lld\n", 
                 i, vec_idx[i].id, vec_idx[i].norm, vec_idx[i].count, vec_idx[i].offset);
         ReadInvert(fp_ivt, vec_idx[i], vec_ivt);
@@ -580,4 +613,5 @@ bool BiGraph::OutputTxt() {
     fclose(fp_txt);
     return true;
 }
+
 

@@ -33,11 +33,6 @@ vector<string> GetAllFiles( string path ) {
             res.push_back(s);
     }
     pclose(ret);
-    // test
-    printf("file:\n");
-    for (size_t i = 0; i < res.size(); i++) {
-        printf("\t[%s]\n", res[i].c_str());
-    }
     return res;
 }
 

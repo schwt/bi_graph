@@ -56,6 +56,7 @@ private:
     bool MakeMatrixU2P(const string&);
     bool Train();
     bool OutputTxt();
+    bool OutputTxtFormat();
     float guassian(int);
     void normalize(vector<MatrixInvert>&, float);
 };
