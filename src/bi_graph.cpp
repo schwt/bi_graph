@@ -577,7 +577,7 @@ bool BiGraph::OutputTxt() {
         float max_score = vec_ivt[0].score + 0.1;
         for (size_t j = 0; j < vec_ivt.size(); j++) {
             fprintf(fp_txt, "%d:%f", vec_ivt[j].id, max_score - vec_ivt[j].score);
-            if (j != vec_idx.size() -1) {
+            if (j != vec_ivt.size() -1) {
                 fprintf(fp_txt, ",");
             }
         }
