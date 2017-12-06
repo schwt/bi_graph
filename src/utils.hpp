@@ -28,8 +28,11 @@ vector<string> GetAllFiles( string path ) {
     vector<string> res;
     while (fgets(buff, sizeof(buff), ret)) {
         string s = string(buff);
-        res.push_back(trim(s));
+        s = trim(s);
+        if (s.length() > 0) 
+            res.push_back(s);
     }
+    pclose(ret);
     // test
     printf("file:\n");
     for (size_t i = 0; i < res.size(); i++) {
