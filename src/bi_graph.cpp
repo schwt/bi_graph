@@ -20,8 +20,6 @@ bool CMP_BY_UTP(const DataNode& left, const DataNode& right) {
 }
 
 BiGraph::BiGraph() {
-    F_matrix_ivt_user_ = "../data/temp/matrix_user.ivt";
-    F_matrix_ivt_item_ = "../data/temp/matrix_item.ivt";
 }
 
 BiGraph::~BiGraph()
@@ -55,7 +53,8 @@ bool BiGraph::ReadConfigFile(string s_f_config)
 
     bool res = true;
 
-    if (!(res = ReadConfig.ReadInto("file", "train_data",  F_train_data_))) return res;
+    if (!(res = ReadConfig.ReadInto("file", "temp_dir",      DIR_temp_))) return res;
+    if (!(res = ReadConfig.ReadInto("file", "train_data",    F_train_data_))) return res;
     if (!(res = ReadConfig.ReadInto("file", "sim_item_idx",  F_output_idx_))) return res;
     if (!(res = ReadConfig.ReadInto("file", "sim_item_ivt",  F_output_ivt_))) return res;
     if (!(res = ReadConfig.ReadInto("file", "sim_item_txt",  F_output_txt_))) return res;
@@ -86,6 +85,9 @@ bool BiGraph::Calc()
 {
     bool res = true;
 
+    F_matrix_ivt_user_ = DIR_temp_ + "matrix_user.ivt";
+    F_matrix_ivt_item_ = DIR_temp_ + "matrix_item.ivt";
+
     res = SourceDataManage();
     cls_logger.log(__LINE__, res, "SourceDataManage");
     if (!res) return res;
@@ -109,8 +111,8 @@ bool BiGraph::SourceDataManage()
     bool res = true;
     
     
-    string f_temp_data        = "../data/temp/data.dat";
-    string f_temp_data_sorted = "../data/temp/data.sorted.dat";
+    string f_temp_data        = DIR_temp_ + "data.dat";
+    string f_temp_data_sorted = DIR_temp_ + "data.sorted.dat";
 
     if (is_multifile_ == 0) {
         res = LoadData(f_temp_data);

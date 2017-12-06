@@ -16,6 +16,7 @@ private:
     Logger cls_logger;
 
     //////////////////////////// new ///////////////////////////////
+    string DIR_temp_;
     // files
     string F_train_data_;
     string F_output_idx_;
