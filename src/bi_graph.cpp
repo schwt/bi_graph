@@ -1,6 +1,7 @@
 #include <limits.h>
 #include <cmath>
 #include "bi_graph.h"
+#include "utils.hpp"
 
 // #define DEBUG
 
@@ -62,6 +63,7 @@ bool BiGraph::ReadConfigFile(string s_f_config)
     if (!(res = ReadConfig.ReadInto("data", "BUFFERCNT",   BUFFERCNT))) return res;
     if (!(res = ReadConfig.ReadInto("data", "SORTMEMSIZE", SORTMEMSIZE))) return res;
 
+    if (!(res = ReadConfig.ReadInto("data", "is_multifile", is_multifile_))) return res;
     if (!(res = ReadConfig.ReadInto("data", "lambda", lambda_))) return res;
     if (!(res = ReadConfig.ReadInto("data", "rho",    rho_))) return res;
     if (!(res = ReadConfig.ReadInto("data", "sigma",  sigma_))) return res;
@@ -110,9 +112,16 @@ bool BiGraph::SourceDataManage()
     string f_temp_data        = "../data/temp/data.dat";
     string f_temp_data_sorted = "../data/temp/data.sorted.dat";
 
-    res = LoadData(f_temp_data);
-    cls_logger.log(__LINE__, res, "Loaddata");
-    if (!res) return res;
+    if (is_multifile_ == 0) {
+        res = LoadData(f_temp_data);
+        cls_logger.log(__LINE__, res, "Loaddata");
+        if (!res) return res;
+    } else if (is_multifile_ == 1) {
+        res = LoadMultiData(f_temp_data);
+        cls_logger.log(__LINE__, res, "Loaddata");
+        if (!res) return res;
+    }
+
 
     cout << "\nSorting by pid/score/uid..." << endl;
     if(K_MergeFile<DataNode>(f_temp_data.c_str(),
@@ -159,7 +168,6 @@ bool BiGraph::LoadData(const string& dst) {
         printf("error open file %s!\n", dst.c_str());
         return false;
     }
-    ifstream fin(F_train_data_.c_str());
     string line;
     vector<string> sep_vec;
     vector<DataNode> buff;
@@ -173,6 +181,7 @@ bool BiGraph::LoadData(const string& dst) {
     hash_map<int, int> hm_item_map;
     hash_map<int, int>::iterator iti;
 
+    ifstream fin(F_train_data_.c_str());
     while (getline (fin, line)) {
         stringUtils::split(line, " ", sep_vec);
         if (sep_vec.size() != 4) continue;
@@ -202,6 +211,80 @@ bool BiGraph::LoadData(const string& dst) {
         if (++idc >= BUFFERCNT) {
             fwrite(&buff[0], sizeof(DataNode), idc, fp_dst);
             idc = 0;
+        }
+    }
+    if (idc > 0) {
+        fwrite(&buff[0], sizeof(DataNode), idc, fp_dst);
+    }
+    fclose(fp_dst);
+    num_item_ = hm_item_map.size();
+    num_user_ = hm_user_map.size();
+
+    vec_item_id_map_.resize(num_item_);
+    for (iti = hm_item_map.begin(); iti != hm_item_map.end(); iti++) {
+        vec_item_id_map_[iti->second] = iti->first;
+    }
+
+    cls_logger.log("# user count: " + stringUtils::asString(num_user_));
+    cls_logger.log("# item count: " + stringUtils::asString(num_item_));
+    cls_logger.log("# input data: " + stringUtils::asString(cnt));
+    return true;
+}
+// input text: "uid itemID score timestamp"
+// output bin: DataNode
+bool BiGraph::LoadMultiData(const string& dst) {
+    cls_logger.log("-------------LoadData-------------");
+    FILE *fp_dst = fopen(dst.c_str(), "wb");
+    if (!fp_dst) {
+        printf("error open file %s!\n", dst.c_str());
+        return false;
+    }
+    string line;
+    vector<string> sep_vec;
+    vector<DataNode> buff;
+    buff.resize(BUFFERCNT);
+    int idc = 0;
+    int cnt = 0;
+    int mapped_uid = 0;
+    int mapped_pid = 0;
+    hash_map<string, int> hm_user_map;
+    hash_map<string, int>::iterator its;
+    hash_map<int, int> hm_item_map;
+    hash_map<int, int>::iterator iti;
+
+    vector<string> vec_files = GetAllFiles(F_train_data_);
+    for (size_t f = 0; f < vec_files.size(); f++) {
+        ifstream fin(vec_files[f].c_str());
+        while (getline (fin, line)) {
+            stringUtils::split(line, " ", sep_vec);
+            if (sep_vec.size() != 4) continue;
+            if (atof(sep_vec[2].c_str() ) <= 0.0) continue;
+            string user = sep_vec[0];
+            int item = atoi(sep_vec[1].c_str());
+
+            its = hm_user_map.find(user);
+            if (its == hm_user_map.end()) {
+                mapped_uid = hm_user_map.size();
+                hm_user_map.insert(make_pair(user, mapped_uid));
+            } else
+                mapped_uid = its->second;
+            iti = hm_item_map.find(item);
+            if (iti == hm_item_map.end()) {
+                mapped_pid = hm_item_map.size();
+                hm_item_map.insert(make_pair(item, mapped_pid));
+            } else
+                mapped_pid = iti->second;
+
+            buff[idc].user_id   = mapped_uid;
+            buff[idc].item_id   = mapped_pid;
+            buff[idc].score     = atof(sep_vec[2].c_str());
+            buff[idc].timestamp = atoi(sep_vec[3].c_str());
+            cnt++;
+
+            if (++idc >= BUFFERCNT) {
+                fwrite(&buff[0], sizeof(DataNode), idc, fp_dst);
+                idc = 0;
+            }
         }
     }
     if (idc > 0) {

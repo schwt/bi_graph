@@ -21,13 +21,10 @@ private:
     string F_output_idx_;
     string F_output_ivt_;
     string F_output_txt_;
-    // string F_user_map_;
     // tmp file
     string F_matrix_ivt_user_;
     string F_matrix_ivt_item_;
 
-    // vector<string> vec_user_id_map_;
-    // vector<string> vec_item_id_map_;
     vector<int> vec_item_id_map_;
 
     vector<MatrixIndex> vec_matrix_idx_user_;
@@ -36,6 +33,8 @@ private:
     size_t num_item_;
 
     //////////////////////////// Defined in config.ini ///////////////////////////////
+    
+    int is_multifile_;
     int top_reserve_;
     float lambda_;
     float rho_;
@@ -51,6 +50,7 @@ private:
     bool SourceDataManage();
 
     bool LoadData(const string&);
+    bool LoadMultiData(const string&);
     bool MakeMatrixP2U(const string&);
     bool MakeMatrixU2P(const string&);
     bool Train();
