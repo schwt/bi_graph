@@ -256,9 +256,9 @@ bool BiGraph::LoadMultiData(const string& dst) {
 
     vector<string> vec_files = GetAllFiles(F_train_data_);
     for (size_t f = 0; f < vec_files.size(); f++) {
-        ifstream fin(vec_files[f].c_str());
+        ifstream fin((F_train_data_ + "/" + vec_files[f]).c_str());
         while (getline (fin, line)) {
-            stringUtils::split(line, " ", sep_vec);
+            stringUtils::split(line, "\t", sep_vec);
             if (sep_vec.size() != 4) continue;
             if (atof(sep_vec[2].c_str() ) <= 0.0) continue;
             string user = sep_vec[0];
