@@ -36,6 +36,7 @@ private:
     //////////////////////////// Defined in config.ini ///////////////////////////////
     
     int is_multifile_;
+    int calc_in_mem_;
     int top_reserve_;
     float lambda_;
     float rho_;
@@ -55,6 +56,7 @@ private:
     bool MakeMatrixP2U(const string&);
     bool MakeMatrixU2P(const string&);
     bool Train();
+    bool TrainInMem();
     bool OutputTxt();
     bool OutputTxtFormat();
     float guassian(int);

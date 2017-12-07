@@ -63,6 +63,7 @@ bool BiGraph::ReadConfigFile(string s_f_config)
     if (!(res = ReadConfig.ReadInto("data", "SORTMEMSIZE", SORTMEMSIZE))) return res;
 
     if (!(res = ReadConfig.ReadInto("data", "is_multifile", is_multifile_))) return res;
+    if (!(res = ReadConfig.ReadInto("data", "calc_in_mem",  calc_in_mem_))) return res;
     if (!(res = ReadConfig.ReadInto("data", "lambda", lambda_))) return res;
     if (!(res = ReadConfig.ReadInto("data", "rho",    rho_))) return res;
     if (!(res = ReadConfig.ReadInto("data", "sigma",  sigma_))) return res;
@@ -92,7 +93,10 @@ bool BiGraph::Calc()
     cls_logger.log(__LINE__, res, "SourceDataManage");
     if (!res) return res;
 
-    res = Train();
+    if (calc_in_mem_ == 0)
+        res = Train();
+    else
+        res = TrainInMem();
     cls_logger.log(__LINE__, res, "Train");
     if (!res) return res;
 
@@ -165,10 +169,10 @@ bool BiGraph::SourceDataManage()
 // output bin: DataNode
 bool BiGraph::LoadData(const string& dst) {
     cls_logger.log("-------------LoadData-------------");
-    printf("load data from file: %s\n", dst.c_str());
+    cls_logger.log("load data from file: %s\n", F_train_data_.c_str());
     FILE *fp_dst = fopen(dst.c_str(), "wb");
     if (!fp_dst) {
-        printf("error open file %s!\n", dst.c_str());
+        cls_logger.log("error open file %s!\n", dst.c_str());
         return false;
     }
     string line;
@@ -237,10 +241,10 @@ bool BiGraph::LoadData(const string& dst) {
 // output bin: DataNode
 bool BiGraph::LoadMultiData(const string& dst) {
     cls_logger.log("-------------LoadData-------------");
-    printf("load data from path: %s\n", dst.c_str());
+    cls_logger.log("load data from path: %s\n", F_train_data_.c_str());
     FILE *fp_dst = fopen(dst.c_str(), "wb");
     if (!fp_dst) {
-        printf("error open file %s!\n", dst.c_str());
+        cls_logger.log("error open file %s!\n", dst.c_str());
         return false;
     }
     string line;
@@ -257,9 +261,8 @@ bool BiGraph::LoadMultiData(const string& dst) {
     hash_map<int, int>::iterator iti;
 
     vector<string> vec_files = GetAllFiles(F_train_data_);
-    printf("files:\n");
     for (size_t f = 0; f < vec_files.size(); f++) {
-        printf("\t%s\n", vec_files[f].c_str());
+        printf("\treading: %s\n", vec_files[f].c_str());
         ifstream fin((F_train_data_ + "/" + vec_files[f]).c_str());
         while (getline (fin, line)) {
             stringUtils::split(line, "\t", sep_vec);
@@ -343,7 +346,7 @@ bool BiGraph::MakeMatrixU2P(const string& f_src) {
     norm += node.score;
     struct DataNode* readbuf = new struct DataNode[BUFFERCNT];
     if (!CheckMemAlloc(readbuf, BUFFERCNT)) {
-        printf("error allocate mem!\n");
+        cls_logger.log("error allocate mem!\n");
         return false;
     }
 
@@ -388,7 +391,7 @@ bool BiGraph::MakeMatrixU2P(const string& f_src) {
     fclose(fp_src);
     fclose(fp_ivt);
     bool res = IdxIvtCheck<MatrixIndex, MatrixInvert>(vec_matrix_idx_user_, F_matrix_ivt_item_);
-    if (!res) printf("Check Invert: Error!\n");
+    if (!res) cls_logger.log("Check Invert: Error!\n");
 
     cls_logger.log("user idx: " + stringUtils::asString(vec_matrix_idx_user_.size()));
     return res;
@@ -420,7 +423,7 @@ bool BiGraph::MakeMatrixP2U(const string& f_src) {
     norm += node.score;
     struct DataNode* readbuf = new struct DataNode[BUFFERCNT];
     if (!CheckMemAlloc(readbuf, BUFFERCNT)) {
-        printf("error allocate mem!\n");
+        cls_logger.log("error allocate mem!\n");
         return false;
     }
 
@@ -464,12 +467,12 @@ bool BiGraph::MakeMatrixP2U(const string& f_src) {
     fclose(fp_src);
     fclose(fp_ivt);
     bool res = IdxIvtCheck<MatrixIndex, MatrixInvert>(vec_matrix_idx_item_, F_matrix_ivt_user_);
-    if (!res) printf("Check Invert: Error!\n");
+    if (!res) cls_logger.log("Check Invert: Error!\n");
     cls_logger.log("item idx: " + stringUtils::asString(vec_matrix_idx_item_.size()));
     return res;
 }
 
-void pidx(string s, int i, MatrixIndex node) {
+void printIdx(string s, int i, MatrixIndex node) {
 #ifdef DEBUG
     printf("%sid------%d\n", s.c_str(), i);
     printf("%snorm  : %.1f\n", s.c_str(), node.norm);
@@ -477,18 +480,19 @@ void pidx(string s, int i, MatrixIndex node) {
     printf("%soffset: %lld\n", s.c_str(), node.offset);
 #endif
 }
-void pivt(string s, MatrixInvert node) {
+void printIvt(string s, MatrixInvert node) {
 #ifdef DEBUG
     printf("%sid-----%d\n", s.c_str(), node.id);
     printf("%sscore: %.1f\n", s.c_str(), node.score);
 #endif
 }
+
 bool BiGraph::Train() {
     cls_logger.log("-------------Train-------------");
     FILE* fp_ivt_user =  fopen(F_matrix_ivt_user_.c_str(),  "rb");
     FILE* fp_ivt_item =  fopen(F_matrix_ivt_item_.c_str(),  "rb");
     FILE* fp_output_ivt =  fopen(F_output_ivt_.c_str(),  "wb");
-    if (!fp_ivt_item || !fp_ivt_user) { printf("ERROR open file!\n"); return false;}
+    if (!fp_ivt_item || !fp_ivt_user) { cls_logger.log("ERROR open file!\n"); return false;}
      
     vector<MatrixInvert> vec_ivt_user;
     vector<MatrixInvert> vec_ivt_item;
@@ -503,14 +507,14 @@ bool BiGraph::Train() {
     for (size_t pid = 0; pid < num_item_; pid ++) {
         vec_ivt_score.assign(num_item_, ini_node);
         ReadInvert(fp_ivt_user, vec_matrix_idx_item_[pid], vec_ivt_user);
-        pidx("==", pid, vec_matrix_idx_item_[pid]);
+        printIdx("==", pid, vec_matrix_idx_item_[pid]);
         for (iivt_user = vec_ivt_user.begin(); iivt_user != vec_ivt_user.end(); iivt_user++) {
 
-            pivt("|  ", *iivt_user);
-            pidx("|  |  ", iivt_user->id, vec_matrix_idx_user_[iivt_user->id]);
+            printIvt("|  ", *iivt_user);
+            printIdx("|  |  ", iivt_user->id, vec_matrix_idx_user_[iivt_user->id]);
             ReadInvert(fp_ivt_item, vec_matrix_idx_user_[iivt_user->id], vec_ivt_item);
             for (iivt_item = vec_ivt_item.begin(); iivt_item != vec_ivt_item.end(); iivt_item++) {
-            pivt("|  |  |   ", *iivt_item);
+            printIvt("|  |  |   ", *iivt_item);
                 vec_ivt_score[iivt_item->id].score += iivt_user->score * iivt_item->score * guassian(iivt_user->timestamp - iivt_item->timestamp);
             }
         }
@@ -538,9 +542,95 @@ bool BiGraph::Train() {
         vec_output_idx[pid].offset = (long long)from * sizeof(SimInvert);
         fwrite(&vec_ivt_score[0], sizeof(SimInvert), count, fp_output_ivt);
         from += vec_output_idx[pid].count;
+        if  (pid % 50 == 0)  {
+            printf("progress: %.2f%% (%ld)\r", 100.0 * pid / num_item_, pid);
+            fflush(stdout);
+        }
     }
+    printf("progress: 100.00%% (%ld)\n", num_item_);
     fclose(fp_ivt_item);
     fclose(fp_ivt_user);
+    fclose(fp_output_ivt); 
+    FILE* fp_output_idx  = fopen(F_output_idx_.c_str(),  "wb");
+    if (!fp_output_idx) {
+        cls_logger.log("error open file " + F_output_idx_);
+        return false;
+    }
+    fwrite(&vec_output_idx[0], sizeof(SimIndex), num_item_, fp_output_idx);
+
+    fclose(fp_output_idx); 
+
+    bool res = IdxIvtCheck<SimIndex, SimInvert>(F_output_idx_, F_output_ivt_);
+    if (!res) cls_logger.log("check idx-ivt ERROR!");
+    return res;
+}
+
+bool BiGraph::TrainInMem() {
+    cls_logger.log("-------------Train-------------");
+    FILE* fp_output_ivt =  fopen(F_output_ivt_.c_str(),  "wb");
+     
+    vector<MatrixInvert> vec_ivt_user;
+    vector<MatrixInvert> vec_ivt_item;
+    vector<MatrixInvert>::iterator iivt_user;
+    vector<MatrixInvert>::iterator iivt_item;
+
+    LoadIndex_Vector(F_matrix_ivt_user_, vec_ivt_user);
+    LoadIndex_Vector(F_matrix_ivt_item_, vec_ivt_item);
+
+    vector<SimIndex> vec_output_idx(num_item_);
+    vector<SimInvert> vec_ivt_score(num_item_);
+    SimInvert ini_node;
+    int from = 0;
+    ini_node.score = 0.0;
+
+    for (size_t pid = 0; pid < num_item_; pid ++) {
+        vec_ivt_score.assign(num_item_, ini_node);
+        printIdx("==", pid, vec_matrix_idx_item_[pid]);
+        int from_u = vec_matrix_idx_item_[pid].offset / sizeof(MatrixInvert);
+        int to_u   = vec_matrix_idx_item_[pid].count + from_u;
+        for (iivt_user = vec_ivt_user.begin() + from_u; iivt_user < vec_ivt_user.begin() + to_u; iivt_user++) {
+
+            int user_id = iivt_user->id;
+            printIvt("|  ", *iivt_user);
+            printIdx("|  |  ", user_id, vec_matrix_idx_user_[user_id]);
+            int from_i = vec_matrix_idx_user_[user_id].offset / sizeof(MatrixInvert);
+            int to_i   = vec_matrix_idx_user_[user_id].count + from_i;
+            for (iivt_item = vec_ivt_item.begin() + from_i; iivt_item < vec_ivt_item.begin() + to_i; iivt_item++) {
+                printIvt("|  |  |   ", *iivt_item);
+                int item_id = iivt_item->id;
+                vec_ivt_score[item_id].score += iivt_user->score * iivt_item->score * guassian(iivt_user->timestamp - iivt_item->timestamp);
+            }
+        }
+        float sum = 0.0;
+        for (size_t i = 0; i < vec_ivt_score.size(); i++) {
+            if (vec_ivt_score[i].score > 0.0) {
+                vec_ivt_score[i].score /= pow(vec_matrix_idx_item_[i].norm, lambda_);
+                vec_ivt_score[i].id = vec_item_id_map_[i];
+                sum += vec_ivt_score[i].score;
+            }
+        }
+        vec_ivt_score[pid].score = 0.0;
+        int limit_len =  Min(top_reserve_, (int)vec_ivt_score.size());
+        partial_sort(vec_ivt_score.begin(), vec_ivt_score.begin() + limit_len, vec_ivt_score.end() );
+        int count = limit_len;
+        for (int i = 0; i < limit_len; i++) {
+            if (vec_ivt_score[i].score <= 0.0) {
+                count = i;
+                break;
+            }
+        }
+        vec_output_idx[pid].id     = vec_item_id_map_[pid];
+        vec_output_idx[pid].norm   = sum;
+        vec_output_idx[pid].count  = count;
+        vec_output_idx[pid].offset = (long long)from * sizeof(SimInvert);
+        fwrite(&vec_ivt_score[0], sizeof(SimInvert), count, fp_output_ivt);
+        from += vec_output_idx[pid].count;
+        if  (pid % 10 == 0) {
+            printf("progress: %.2f%% (%ld)\r", 100.0 * pid / num_item_, pid);
+            fflush(stdout);
+        }
+    }
+    printf("progress: 100.00%% (%ld)\n", num_item_);
     fclose(fp_output_ivt); 
     FILE* fp_output_idx  = fopen(F_output_idx_.c_str(),  "wb");
     if (!fp_output_idx) {
