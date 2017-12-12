@@ -59,15 +59,15 @@ bool BiGraph::ReadConfigFile(string s_f_config)
     if (!(res = ReadConfig.ReadInto("file", "sim_item_ivt",  F_output_ivt_))) return res;
     if (!(res = ReadConfig.ReadInto("file", "sim_item_txt",  F_output_txt_))) return res;
     
-    if (!(res = ReadConfig.ReadInto("data", "BUFFERCNT",   BUFFERCNT))) return res;
-    if (!(res = ReadConfig.ReadInto("data", "SORTMEMSIZE", SORTMEMSIZE))) return res;
+    if (!(res = ReadConfig.ReadInto("switch", "is_multifile", is_multifile_))) return res;
+    if (!(res = ReadConfig.ReadInto("switch", "calc_in_mem",  calc_in_mem_))) return res;
 
-    if (!(res = ReadConfig.ReadInto("data", "is_multifile", is_multifile_))) return res;
-    if (!(res = ReadConfig.ReadInto("data", "calc_in_mem",  calc_in_mem_))) return res;
     if (!(res = ReadConfig.ReadInto("data", "lambda", lambda_))) return res;
     if (!(res = ReadConfig.ReadInto("data", "rho",    rho_))) return res;
     if (!(res = ReadConfig.ReadInto("data", "sigma",  sigma_))) return res;
     if (!(res = ReadConfig.ReadInto("data", "top_reserve", top_reserve_))) return res;
+    if (!(res = ReadConfig.ReadInto("data", "BUFFERCNT",   BUFFERCNT))) return res;
+    if (!(res = ReadConfig.ReadInto("data", "SORTMEMSIZE", SORTMEMSIZE))) return res;
     
     cls_logger.log("train_data: " + F_train_data_);
     cls_logger.log("sim_item_bin: " +  F_output_ivt_);
@@ -263,7 +263,7 @@ bool BiGraph::LoadMultiData(const string& dst) {
     vector<string> vec_files = GetAllFiles(F_train_data_);
     for (size_t f = 0; f < vec_files.size(); f++) {
         printf("\treading: %s\n", vec_files[f].c_str());
-        ifstream fin((F_train_data_ + "/" + vec_files[f]).c_str());
+        ifstream fin((F_train_data_ + vec_files[f]).c_str());
         while (getline (fin, line)) {
             stringUtils::split(line, "\t", sep_vec);
             if (sep_vec.size() != 4) continue;
