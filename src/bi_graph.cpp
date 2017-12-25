@@ -514,14 +514,14 @@ bool BiGraph::Train() {
             printIdx("|  |  ", iivt_user->id, vec_matrix_idx_user_[iivt_user->id]);
             ReadInvert(fp_ivt_item, vec_matrix_idx_user_[iivt_user->id], vec_ivt_item);
             for (iivt_item = vec_ivt_item.begin(); iivt_item != vec_ivt_item.end(); iivt_item++) {
-            printIvt("|  |  |   ", *iivt_item);
+                printIvt("|  |  |   ", *iivt_item);
                 vec_ivt_score[iivt_item->id].score += iivt_user->score * iivt_item->score * guassian(iivt_user->timestamp - iivt_item->timestamp);
             }
         }
         float sum = 0.0;
         for (size_t i = 0; i < vec_ivt_score.size(); i++) {
             if (vec_ivt_score[i].score > 0.0) {
-                vec_ivt_score[i].score /= pow(vec_matrix_idx_item_[i].norm, lambda_);
+                vec_ivt_score[i].score /= pow(vec_matrix_idx_item_[i].norm, lambda_) + 0.01;
                 vec_ivt_score[i].id = vec_item_id_map_[i];
                 sum += vec_ivt_score[i].score;
             }
@@ -542,7 +542,7 @@ bool BiGraph::Train() {
         vec_output_idx[pid].offset = (long long)from * sizeof(SimInvert);
         fwrite(&vec_ivt_score[0], sizeof(SimInvert), count, fp_output_ivt);
         from += vec_output_idx[pid].count;
-        if  (pid % 50 == 0)  {
+        if  (pid % 10 == 0)  {
             printf("progress: %.2f%% (%ld)\r", 100.0 * pid / num_item_, pid);
             fflush(stdout);
         }
@@ -604,7 +604,7 @@ bool BiGraph::TrainInMem() {
         float sum = 0.0;
         for (size_t i = 0; i < vec_ivt_score.size(); i++) {
             if (vec_ivt_score[i].score > 0.0) {
-                vec_ivt_score[i].score /= pow(vec_matrix_idx_item_[i].norm, lambda_);
+                vec_ivt_score[i].score /= pow(vec_matrix_idx_item_[i].norm, lambda_) + 0.01;
                 vec_ivt_score[i].id = vec_item_id_map_[i];
                 sum += vec_ivt_score[i].score;
             }
@@ -664,9 +664,8 @@ bool BiGraph::OutputTxt() {
     for (size_t i = 0; i < vec_idx.size(); i++) {
         fprintf(fp_txt, "%d\t", vec_idx[i].id);
         ReadInvert(fp_ivt, vec_idx[i], vec_ivt);
-        float max_score = vec_ivt[0].score + 0.1;
         for (size_t j = 0; j < vec_ivt.size(); j++) {
-            fprintf(fp_txt, "%d:%f", vec_ivt[j].id, max_score - vec_ivt[j].score);
+            fprintf(fp_txt, "%d:%f", vec_ivt[j].id, vec_ivt[j].score);
             if (j != vec_ivt.size() -1) {
                 fprintf(fp_txt, ",");
             }
