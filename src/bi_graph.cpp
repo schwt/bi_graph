@@ -510,11 +510,11 @@ bool BiGraph::Train() {
         printIdx("==", pid, vec_matrix_idx_item_[pid]);
         for (iivt_user = vec_ivt_user.begin(); iivt_user != vec_ivt_user.end(); iivt_user++) {
 
-            printIvt("|  ", *iivt_user);
-            printIdx("|  |  ", iivt_user->id, vec_matrix_idx_user_[iivt_user->id]);
+            // printIvt("|  ", *iivt_user);
+            // printIdx("|  |  ", iivt_user->id, vec_matrix_idx_user_[iivt_user->id]);
             ReadInvert(fp_ivt_item, vec_matrix_idx_user_[iivt_user->id], vec_ivt_item);
             for (iivt_item = vec_ivt_item.begin(); iivt_item != vec_ivt_item.end(); iivt_item++) {
-                printIvt("|  |  |   ", *iivt_item);
+                // printIvt("|  |  |   ", *iivt_item);
                 vec_ivt_score[iivt_item->id].score += iivt_user->score * iivt_item->score * guassian(iivt_user->timestamp - iivt_item->timestamp);
             }
         }
@@ -578,54 +578,62 @@ bool BiGraph::TrainInMem() {
     LoadIndex_Vector(F_matrix_ivt_item_, vec_ivt_item);
 
     vector<SimIndex> vec_output_idx(num_item_);
-    vector<SimInvert> vec_ivt_score(num_item_);
-    SimInvert ini_node;
+    vector<SimInvert> vec_ivt_score;
+    hash_map<int, float> hm_ivt_score;
+    hash_map<int, float>::iterator iter_hm;
     int from = 0;
-    ini_node.score = 0.0;
+
+    CTimer timer;
+    timer.StartTiming();
+
+    for (vector<MatrixIndex>::iterator iter = vec_matrix_idx_item_.begin(); iter != vec_matrix_idx_item_.end(); iter++) {
+        iter->norm = pow(iter->norm, lambda_) + 1;
+    }
 
     for (size_t pid = 0; pid < num_item_; pid ++) {
-        vec_ivt_score.assign(num_item_, ini_node);
+        hm_ivt_score.clear();
         printIdx("==", pid, vec_matrix_idx_item_[pid]);
         int from_u = vec_matrix_idx_item_[pid].offset / sizeof(MatrixInvert);
         int to_u   = vec_matrix_idx_item_[pid].count + from_u;
         for (iivt_user = vec_ivt_user.begin() + from_u; iivt_user < vec_ivt_user.begin() + to_u; iivt_user++) {
 
             int user_id = iivt_user->id;
-            printIvt("|  ", *iivt_user);
-            printIdx("|  |  ", user_id, vec_matrix_idx_user_[user_id]);
+            // printIvt("|  ", *iivt_user);
+            // printIdx("|  |  ", user_id, vec_matrix_idx_user_[user_id]);
             int from_i = vec_matrix_idx_user_[user_id].offset / sizeof(MatrixInvert);
             int to_i   = vec_matrix_idx_user_[user_id].count + from_i;
             for (iivt_item = vec_ivt_item.begin() + from_i; iivt_item < vec_ivt_item.begin() + to_i; iivt_item++) {
-                printIvt("|  |  |   ", *iivt_item);
-                int item_id = iivt_item->id;
-                vec_ivt_score[item_id].score += iivt_user->score * iivt_item->score * guassian(iivt_user->timestamp - iivt_item->timestamp);
+                // printIvt("|  |  |   ", *iivt_item);
+                size_t item_id = iivt_item->id;
+                if (item_id == pid) continue;
+                float score = iivt_user->score * iivt_item->score * guassian(iivt_user->timestamp - iivt_item->timestamp);
+                iter_hm = hm_ivt_score.find(item_id);
+                if (iter_hm != hm_ivt_score.end())
+                    hm_ivt_score[item_id] = score + iter_hm->second;
+                else
+                    hm_ivt_score[item_id] = score;
             }
         }
+        if (hm_ivt_score.size() == 0) 
+            continue;
         float sum = 0.0;
-        for (size_t i = 0; i < vec_ivt_score.size(); i++) {
-            if (vec_ivt_score[i].score > 0.0) {
-                vec_ivt_score[i].score /= pow(vec_matrix_idx_item_[i].norm, lambda_) + 0.01;
-                vec_ivt_score[i].id = vec_item_id_map_[i];
-                sum += vec_ivt_score[i].score;
-            }
+        vec_ivt_score.resize(hm_ivt_score.size());
+        int i = 0;
+        for (iter_hm = hm_ivt_score.begin(); iter_hm != hm_ivt_score.end(); iter_hm++, i++) {
+            vec_ivt_score[i].id    = vec_item_id_map_[iter_hm->first];
+            vec_ivt_score[i].score = iter_hm->second / vec_matrix_idx_item_[iter_hm->first].norm;
+            sum += vec_ivt_score[i].score;
         }
-        vec_ivt_score[pid].score = 0.0;
-        int limit_len =  Min(top_reserve_, (int)vec_ivt_score.size());
-        partial_sort(vec_ivt_score.begin(), vec_ivt_score.begin() + limit_len, vec_ivt_score.end() );
-        int count = limit_len;
-        for (int i = 0; i < limit_len; i++) {
-            if (vec_ivt_score[i].score <= 0.0) {
-                count = i;
-                break;
-            }
-        }
+        int len =  Min(top_reserve_, (int)vec_ivt_score.size());
+        partial_sort(vec_ivt_score.begin(), vec_ivt_score.begin() + len, vec_ivt_score.end() );
+
         vec_output_idx[pid].id     = vec_item_id_map_[pid];
         vec_output_idx[pid].norm   = sum;
-        vec_output_idx[pid].count  = count;
+        vec_output_idx[pid].count  = len;
         vec_output_idx[pid].offset = (long long)from * sizeof(SimInvert);
-        fwrite(&vec_ivt_score[0], sizeof(SimInvert), count, fp_output_ivt);
+        fwrite(&vec_ivt_score[0], sizeof(SimInvert), len, fp_output_ivt);
         from += vec_output_idx[pid].count;
-        if  (pid % 10 == 0) {
+        if  (pid % 1000 == 0) {
             printf("progress: %.2f%% (%ld)\r", 100.0 * pid / num_item_, pid);
             fflush(stdout);
         }
@@ -640,6 +648,11 @@ bool BiGraph::TrainInMem() {
     fwrite(&vec_output_idx[0], sizeof(SimIndex), num_item_, fp_output_idx);
 
     fclose(fp_output_idx); 
+
+    timer.EndTiming();
+    long used_seconds = timer.UsedSeconds();
+    printf("train time: %ld\n", used_seconds);
+    printf("mean  time: %f\n", 1.0 * used_seconds / num_item_);
 
     bool res = IdxIvtCheck<SimIndex, SimInvert>(F_output_idx_, F_output_ivt_);
     if (!res) cls_logger.log("check idx-ivt ERROR!");
