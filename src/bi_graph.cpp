@@ -235,12 +235,13 @@ bool BiGraph::LoadData(const string& dst) {
     cls_logger.log("# user count: " + stringUtils::asString(num_user_));
     cls_logger.log("# item count: " + stringUtils::asString(num_item_));
     cls_logger.log("# input data: " + stringUtils::asString(cnt));
+    if (cnt == 0) return false;
     return true;
 }
 // input text: "uid itemID score timestamp"
 // output bin: DataNode
 bool BiGraph::LoadMultiData(const string& dst) {
-    cls_logger.log("-------------LoadData-------------");
+    cls_logger.log("-------------LoadMultiData-------------");
     cls_logger.log("load data from path: %s\n", F_train_data_.c_str());
     FILE *fp_dst = fopen(dst.c_str(), "wb");
     if (!fp_dst) {
@@ -261,8 +262,9 @@ bool BiGraph::LoadMultiData(const string& dst) {
     hash_map<int, int>::iterator iti;
 
     vector<string> vec_files = GetAllFiles(F_train_data_);
+    printf("# data files: %ld\n", vec_files.size());
     for (size_t f = 0; f < vec_files.size(); f++) {
-        printf("\treading: %s\n", vec_files[f].c_str());
+        printf("\treading: %s.\n", vec_files[f].c_str());
         ifstream fin((F_train_data_ + vec_files[f]).c_str());
         while (getline (fin, line)) {
             stringUtils::split(line, "\t", sep_vec);
@@ -311,6 +313,7 @@ bool BiGraph::LoadMultiData(const string& dst) {
     cls_logger.log("# user count: " + stringUtils::asString(num_user_));
     cls_logger.log("# item count: " + stringUtils::asString(num_item_));
     cls_logger.log("# input data: " + stringUtils::asString(cnt));
+    if (cnt == 0) return false;
     return true;
 }
 

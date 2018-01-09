@@ -16,7 +16,8 @@ string& trim(string &s)
 }
 
 vector<string> GetAllFiles( string path ) {
-    string cmd = "ls -l " + path + "| awk ' $NF~/txt/ {print $NF}'";
+    // string cmd = "ls -l " + path + "| awk ' $NF~/txt/ {print $NF}'"; // 限制.txt后缀
+    string cmd = "ls -l " + path + "| awk '{if (NF > 5) {print $NF}}'";
     FILE *ret = popen(cmd.c_str(), "r");
 
     if (ret == NULL) {
