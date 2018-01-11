@@ -41,6 +41,7 @@ private:
     float lambda_;
     float rho_;
     float sigma_;
+    int progress_num_;
 
     int BUFFERCNT;
     int SORTMEMSIZE;

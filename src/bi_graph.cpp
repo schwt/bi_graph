@@ -65,9 +65,10 @@ bool BiGraph::ReadConfigFile(string s_f_config)
     if (!(res = ReadConfig.ReadInto("data", "lambda", lambda_))) return res;
     if (!(res = ReadConfig.ReadInto("data", "rho",    rho_))) return res;
     if (!(res = ReadConfig.ReadInto("data", "sigma",  sigma_))) return res;
-    if (!(res = ReadConfig.ReadInto("data", "top_reserve", top_reserve_))) return res;
-    if (!(res = ReadConfig.ReadInto("data", "BUFFERCNT",   BUFFERCNT))) return res;
-    if (!(res = ReadConfig.ReadInto("data", "SORTMEMSIZE", SORTMEMSIZE))) return res;
+    if (!(res = ReadConfig.ReadInto("data", "top_reserve",  top_reserve_))) return res;
+    if (!(res = ReadConfig.ReadInto("data", "BUFFERCNT",    BUFFERCNT))) return res;
+    if (!(res = ReadConfig.ReadInto("data", "SORTMEMSIZE",  SORTMEMSIZE))) return res;
+    if (!(res = ReadConfig.ReadInto("data", "progress_num", progress_num_))) return res;
     
     cls_logger.log("train_data: " + F_train_data_);
     cls_logger.log("sim_item_bin: " +  F_output_ivt_);
@@ -545,7 +546,7 @@ bool BiGraph::Train() {
         vec_output_idx[pid].offset = (long long)from * sizeof(SimInvert);
         fwrite(&vec_ivt_score[0], sizeof(SimInvert), count, fp_output_ivt);
         from += vec_output_idx[pid].count;
-        if  (pid % 10 == 0)  {
+        if  (pid % progress_num_ == 0)  {
             printf("progress: %.2f%% (%ld)\r", 100.0 * pid / num_item_, pid);
             fflush(stdout);
         }
@@ -636,7 +637,7 @@ bool BiGraph::TrainInMem() {
         vec_output_idx[pid].offset = (long long)from * sizeof(SimInvert);
         fwrite(&vec_ivt_score[0], sizeof(SimInvert), len, fp_output_ivt);
         from += vec_output_idx[pid].count;
-        if  (pid % 1000 == 0) {
+        if  (pid % progress_num_ == 0) {
             printf("progress: %.2f%% (%ld)\r", 100.0 * pid / num_item_, pid);
             fflush(stdout);
         }
