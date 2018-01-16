@@ -42,6 +42,9 @@ private:
     float rho_;
     float sigma_;
     int progress_num_;
+    // 读数据过滤的行为分数范围: score_min_ <= x <= score_max_
+    int score_min_;         
+    int score_max_;
 
     int BUFFERCNT;
     int SORTMEMSIZE;
