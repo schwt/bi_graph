@@ -82,6 +82,8 @@ bool BiGraph::ReadConfigFile(string s_f_config)
     cls_logger.log("rho: " + stringUtils::asString(rho_));
     cls_logger.log("sigma: " + stringUtils::asString(sigma_));
     cls_logger.log("top_reserve: " + stringUtils::asString(top_reserve_));
+    cls_logger.log("score_min: " + stringUtils::asString(score_min_));
+    cls_logger.log("score_max: " + stringUtils::asString(score_max_));
     return res;
 }
 
@@ -242,7 +244,7 @@ bool BiGraph::LoadData(const string& dst) {
 
     cls_logger.log("# user count: " + stringUtils::asString(num_user_));
     cls_logger.log("# item count: " + stringUtils::asString(num_item_));
-    cls_logger.log("# manage data: " + stringUtils::asString(cnt2) + "/" + stringUtils::asString(cnt1));
+    cls_logger.log("# input data: " + stringUtils::asString(cnt2) + "/" + stringUtils::asString(cnt1));
     if (cnt2 == 0) return false;
     return true;
 }
@@ -261,7 +263,7 @@ bool BiGraph::LoadMultiData(const string& dst) {
     vector<DataNode> buff;
     buff.resize(BUFFERCNT);
     int idc = 0;
-    int cnt = 0;
+    int cnt1 = 0, cnt2 = 0;
     int mapped_uid = 0;
     int mapped_pid = 0;
     hash_map<string, int> hm_user_map;
@@ -272,14 +274,19 @@ bool BiGraph::LoadMultiData(const string& dst) {
     vector<string> vec_files = GetAllFiles(F_train_data_);
     printf("# data files: %ld\n", vec_files.size());
     for (size_t f = 0; f < vec_files.size(); f++) {
+        cnt1++;
         printf("\treading: %s.\n", vec_files[f].c_str());
         ifstream fin((F_train_data_ + vec_files[f]).c_str());
         while (getline (fin, line)) {
+            cnt1++;
             stringUtils::split(line, "\t", sep_vec);
             if (sep_vec.size() != 4) continue;
             if (atof(sep_vec[2].c_str() ) <= 0.0) continue;
-            string user = sep_vec[0];
-            int item = atoi(sep_vec[1].c_str());
+            string user   = sep_vec[0];
+            int item      = atoi(sep_vec[1].c_str());
+            float score   = atof(sep_vec[2].c_str());
+            int timestamp = atoi(sep_vec[3].c_str());
+            if (score < score_min_ || score > score_max_) continue;
 
             its = hm_user_map.find(user);
             if (its == hm_user_map.end()) {
@@ -296,9 +303,9 @@ bool BiGraph::LoadMultiData(const string& dst) {
 
             buff[idc].user_id   = mapped_uid;
             buff[idc].item_id   = mapped_pid;
-            buff[idc].score     = atof(sep_vec[2].c_str());
-            buff[idc].timestamp = atoi(sep_vec[3].c_str());
-            cnt++;
+            buff[idc].score     = score;
+            buff[idc].timestamp = timestamp;
+            cnt2++;
 
             if (++idc >= BUFFERCNT) {
                 fwrite(&buff[0], sizeof(DataNode), idc, fp_dst);
@@ -320,8 +327,8 @@ bool BiGraph::LoadMultiData(const string& dst) {
 
     cls_logger.log("# user count: " + stringUtils::asString(num_user_));
     cls_logger.log("# item count: " + stringUtils::asString(num_item_));
-    cls_logger.log("# input data: " + stringUtils::asString(cnt));
-    if (cnt == 0) return false;
+    cls_logger.log("# input data: " + stringUtils::asString(cnt2) + "/" + stringUtils::asString(cnt1));
+    if (cnt2 == 0) return false;
     return true;
 }
 
