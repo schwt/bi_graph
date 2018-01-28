@@ -1,7 +1,7 @@
 #ifndef MYSTRUCT_H
 #define MYSTRUCT_H
 
-#include <assert.h>
+// #include <assert.h>
 #include <cmath>
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,7 +21,6 @@
 #include <dlfcn.h>
 
 #include <sys/types.h>
-#include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/mman.h>
 
@@ -32,17 +31,8 @@
 #include "../../clib/ReadStructFile.h"   // µ¹ÅÅË÷Òý
 #include "../../clib/MyGloble.h"
 #include "../../clib/Logger.h"
-// #include "../../clib/stringUtils.h"
 
 using namespace std;
-
-#ifdef __GNUC__
-#define OTL_ODBC_UNIX
-#endif
-
-#define OTL_ODBC  //  Compile OTL 4.0/ODBC
-#define OTL_STL
-#define OTL_ODBC_SELECT_STM_EXECUTE_BEFORE_DESCRIBE
 
 typedef unsigned int UINT;
 

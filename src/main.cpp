@@ -21,9 +21,6 @@ int main(int argc, char* argv[])
     if (!b_rt) return -1;
     timer.EndTiming();
     timer.OutPutTimeSpan();
-    
 
-
-    printf("OK!\n");
     return 0;
 }

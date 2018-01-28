@@ -19,7 +19,7 @@ check_struct: check_struct.o
 %.o : %.cpp
 	$(CXX) -c $(CXXFLAGS) $(INCLUDE) $< $(INCLUDE)
 
-%.o : %.c	
+%.o : %.c
 	$(CXX) -c $(CFLAGS) $< $(INCLUDE)
 
 clean :

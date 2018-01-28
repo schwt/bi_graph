@@ -24,7 +24,7 @@ BiGraph::BiGraph() {
 
 BiGraph::~BiGraph()
 {
-    cls_logger.log("done.");
+    // cls_logger.log("done.");
 }
 
 // 初始化
@@ -39,7 +39,7 @@ bool BiGraph::Init(const char* s_f_config)
         return false;
     }
     else {
-        cls_logger.log(__LINE__, true, "ReadConfigFile");
+        cls_logger.log(true, "ReadConfigFile");
     }
     return res;
 }
@@ -135,12 +135,12 @@ bool BiGraph::SourceDataManage()
     }
 
 
-    cout << "\nSorting by pid/score/uid..." << endl;
+    cls_logger.log("Sorting by pid/score/uid...");
     if(K_MergeFile<DataNode>(f_temp_data.c_str(),
                              f_temp_data_sorted.c_str(), CMP_BY_PTU,
                              SORTMEMSIZE) == -1) res = false;
     cls_logger.log(__LINE__, res, "K_MergeFile " + f_temp_data 
-                                  + " to " + f_temp_data_sorted);
+                                  + " -> " + f_temp_data_sorted);
     if (!res) return res;
 
 
@@ -151,12 +151,12 @@ bool BiGraph::SourceDataManage()
     cout << endl;
     RemoveFile(f_temp_data_sorted);
  
-    cout << "\nSorting by uid/score/pid..." << endl;
+    cls_logger.log("Sorting by uid/score/pid...");
     if(K_MergeFile<DataNode>(f_temp_data.c_str(),
                              f_temp_data_sorted.c_str(),
                              CMP_BY_UTP, SORTMEMSIZE) == -1) res = false;
     cls_logger.log(__LINE__, res, "K_MergeFile " + f_temp_data
-                                  + " to " + f_temp_data_sorted);
+                                  + " -> " + f_temp_data_sorted);
     if (!res) return res;
 
 
@@ -175,10 +175,10 @@ bool BiGraph::SourceDataManage()
 // output bin: DataNode
 bool BiGraph::LoadData(const string& dst) {
     cls_logger.log("-------------LoadData-------------");
-    cls_logger.log("load data from file: %s\n", F_train_data_.c_str());
+    cls_logger.log("load data from file: " + F_train_data_);
     FILE *fp_dst = fopen(dst.c_str(), "wb");
     if (!fp_dst) {
-        cls_logger.log("error open file %s!\n", dst.c_str());
+        cls_logger.log(__LINE__, false, "error open file " + dst + "!");
         return false;
     }
     string line;
@@ -252,10 +252,10 @@ bool BiGraph::LoadData(const string& dst) {
 // output bin: DataNode
 bool BiGraph::LoadMultiData(const string& dst) {
     cls_logger.log("-------------LoadMultiData-------------");
-    cls_logger.log("load data from path: %s\n", F_train_data_.c_str());
+    cls_logger.log("load data from path: " + F_train_data_);
     FILE *fp_dst = fopen(dst.c_str(), "wb");
     if (!fp_dst) {
-        cls_logger.log("error open file %s!\n", dst.c_str());
+        cls_logger.log(__LINE__, false, "error open file: " + dst + "!");
         return false;
     }
     string line;
@@ -364,7 +364,7 @@ bool BiGraph::MakeMatrixU2P(const string& f_src) {
     norm += node.score;
     struct DataNode* readbuf = new struct DataNode[BUFFERCNT];
     if (!CheckMemAlloc(readbuf, BUFFERCNT)) {
-        cls_logger.log("error allocate mem!\n");
+        cls_logger.log(__LINE__, false, "error allocate mem!");
         return false;
     }
 
@@ -409,7 +409,7 @@ bool BiGraph::MakeMatrixU2P(const string& f_src) {
     fclose(fp_src);
     fclose(fp_ivt);
     bool res = IdxIvtCheck<MatrixIndex, MatrixInvert>(vec_matrix_idx_user_, F_matrix_ivt_item_);
-    if (!res) cls_logger.log("Check Invert: Error!\n");
+    if (!res) cls_logger.log(__LINE__, false, "Check Invert: Error!");
 
     cls_logger.log("user idx: " + stringUtils::asString(vec_matrix_idx_user_.size()));
     return res;
@@ -441,7 +441,7 @@ bool BiGraph::MakeMatrixP2U(const string& f_src) {
     norm += node.score;
     struct DataNode* readbuf = new struct DataNode[BUFFERCNT];
     if (!CheckMemAlloc(readbuf, BUFFERCNT)) {
-        cls_logger.log("error allocate mem!\n");
+        cls_logger.log(__LINE__, false, "error allocate mem!");
         return false;
     }
 
@@ -485,7 +485,7 @@ bool BiGraph::MakeMatrixP2U(const string& f_src) {
     fclose(fp_src);
     fclose(fp_ivt);
     bool res = IdxIvtCheck<MatrixIndex, MatrixInvert>(vec_matrix_idx_item_, F_matrix_ivt_user_);
-    if (!res) cls_logger.log("Check Invert: Error!\n");
+    if (!res) cls_logger.log(__LINE__, false, "Check Invert: Error!\n");
     cls_logger.log("item idx: " + stringUtils::asString(vec_matrix_idx_item_.size()));
     return res;
 }
@@ -510,7 +510,10 @@ bool BiGraph::Train() {
     FILE* fp_ivt_user =  fopen(F_matrix_ivt_user_.c_str(),  "rb");
     FILE* fp_ivt_item =  fopen(F_matrix_ivt_item_.c_str(),  "rb");
     FILE* fp_output_ivt =  fopen(F_output_ivt_.c_str(),  "wb");
-    if (!fp_ivt_item || !fp_ivt_user) { cls_logger.log("ERROR open file!\n"); return false;}
+    if (!fp_ivt_item || !fp_ivt_user) { 
+        cls_logger.log(__LINE__, false, "ERROR open file!\n"); 
+        return false;
+    }
      
     vector<MatrixInvert> vec_ivt_user;
     vector<MatrixInvert> vec_ivt_item;
@@ -571,7 +574,7 @@ bool BiGraph::Train() {
     fclose(fp_output_ivt); 
     FILE* fp_output_idx  = fopen(F_output_idx_.c_str(),  "wb");
     if (!fp_output_idx) {
-        cls_logger.log("error open file " + F_output_idx_);
+        cls_logger.log(__LINE__, false, "error open file " + F_output_idx_);
         return false;
     }
     fwrite(&vec_output_idx[0], sizeof(SimIndex), num_item_, fp_output_idx);
@@ -660,7 +663,7 @@ bool BiGraph::TrainInMem() {
     fclose(fp_output_ivt); 
     FILE* fp_output_idx  = fopen(F_output_idx_.c_str(),  "wb");
     if (!fp_output_idx) {
-        cls_logger.log("error open file " + F_output_idx_);
+        cls_logger.log(__LINE__, false, "error open file " + F_output_idx_);
         return false;
     }
     fwrite(&vec_output_idx[0], sizeof(SimIndex), num_item_, fp_output_idx);
@@ -669,11 +672,11 @@ bool BiGraph::TrainInMem() {
 
     timer.EndTiming();
     long used_seconds = timer.UsedSeconds();
-    printf("train time: %ld\n", used_seconds);
-    printf("mean  time: %f\n", 1.0 * used_seconds / num_item_);
+    cls_logger.log("train time: " + stringUtils::asString(used_seconds));
+    cls_logger.log(" mean time: " + stringUtils::asString(1.0 * used_seconds / num_item_));
 
     bool res = IdxIvtCheck<SimIndex, SimInvert>(F_output_idx_, F_output_ivt_);
-    if (!res) cls_logger.log("check idx-ivt ERROR!");
+    if (!res) cls_logger.log(__LINE__, false, "check idx-ivt ERROR!");
     return res;
 }
 
@@ -686,7 +689,7 @@ bool BiGraph::OutputTxt() {
     FILE *fp_ivt = fopen(F_output_ivt_.c_str(), "rb");
     FILE *fp_txt = fopen(F_output_txt_.c_str(), "w");
     if (!fp_ivt || !fp_txt) {
-        cls_logger.log(__LINE__, false, "ERROR open files!\n");
+        cls_logger.log(__LINE__, false, "ERROR open files!");
         return false;
     }
     vector<SimIndex>  vec_idx;
@@ -714,7 +717,7 @@ bool BiGraph::OutputTxtFormat() {
     FILE *fp_ivt = fopen(F_output_ivt_.c_str(), "rb");
     FILE *fp_txt = fopen(F_output_txt_.c_str(), "w");
     if (!fp_ivt || !fp_txt) {
-        cls_logger.log(__LINE__, false, "ERROR open files!\n");
+        cls_logger.log(__LINE__, false, "ERROR open files!");
         return false;
     }
     vector<SimIndex>  vec_idx;
