@@ -600,8 +600,9 @@ bool BiGraph::TrainInMem() {
 
     vector<SimIndex> vec_output_idx(num_item_);
     vector<SimInvert> vec_ivt_score;
-    hash_map<int, float> hm_ivt_score;
-    hash_map<int, float>::iterator iter_hm;
+    vector<float> vec_buff_score(num_item_);
+    vector<int> vec_buff_id(num_item_);
+    int buff_cnt = 0;
     int from = 0;
 
     CTimer timer;
@@ -612,7 +613,6 @@ bool BiGraph::TrainInMem() {
     }
 
     for (size_t pid = 0; pid < num_item_; pid ++) {
-        hm_ivt_score.clear();
         printIdx("==", pid, vec_matrix_idx_item_[pid]);
         int from_u = vec_matrix_idx_item_[pid].offset / sizeof(MatrixInvert);
         int to_u   = vec_matrix_idx_item_[pid].count + from_u;
@@ -628,23 +628,24 @@ bool BiGraph::TrainInMem() {
                 size_t item_id = iivt_item->id;
                 if (item_id == pid) continue;
                 float score = iivt_user->score * iivt_item->score * guassian(iivt_user->timestamp - iivt_item->timestamp);
-                iter_hm = hm_ivt_score.find(item_id);
-                if (iter_hm != hm_ivt_score.end())
-                    hm_ivt_score[item_id] = score + iter_hm->second;
-                else
-                    hm_ivt_score[item_id] = score;
+                if (vec_buff_score[item_id] == 0) 
+                    vec_buff_id[buff_cnt++] = item_id;
+                vec_buff_score[item_id] += score;
             }
         }
-        if (hm_ivt_score.size() == 0) 
+        if (buff_cnt == 0)
             continue;
         float sum = 0.0;
-        vec_ivt_score.resize(hm_ivt_score.size());
-        int i = 0;
-        for (iter_hm = hm_ivt_score.begin(); iter_hm != hm_ivt_score.end(); iter_hm++, i++) {
-            vec_ivt_score[i].id    = vec_item_id_map_[iter_hm->first];
-            vec_ivt_score[i].score = iter_hm->second / vec_matrix_idx_item_[iter_hm->first].norm;
+        vec_ivt_score.resize(buff_cnt);
+        for (int i = 0; i < buff_cnt; i++) {
+            int id = vec_buff_id[i];
+            vec_ivt_score[i].id    = vec_item_id_map_[id];
+            vec_ivt_score[i].score = vec_buff_score[id] / vec_matrix_idx_item_[id].norm;
             sum += vec_ivt_score[i].score;
+            vec_buff_id[i] = 0;
+            vec_buff_score[id] = 0;
         }
+        buff_cnt = 0;
         int len =  Min(top_reserve_, (int)vec_ivt_score.size());
         partial_sort(vec_ivt_score.begin(), vec_ivt_score.begin() + len, vec_ivt_score.end() );
 
