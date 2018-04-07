@@ -13,12 +13,13 @@ public:
 private:
     bool ReadConfigFile(string file_config);
 private:
-    Logger cls_logger;
+    Logger logger;
 
     //////////////////////////// new ///////////////////////////////
     string DIR_temp_;
     // files
     string F_train_data_;
+    string F_train_data_right_;
     string F_output_idx_;
     string F_output_ivt_;
     string F_output_txt_;
@@ -26,16 +27,19 @@ private:
     string F_matrix_ivt_user_;
     string F_matrix_ivt_item_;
 
-    vector<int> vec_item_id_map_;
+    hash_map<string, int> hm_user_map_;
+    vector<int> vec_item_id_left_;
+    vector<int> vec_item_id_right_;
+    vector<int> vec_item_right_norm_;
 
     vector<MatrixIndex> vec_matrix_idx_user_;
     vector<MatrixIndex> vec_matrix_idx_item_;
     size_t num_user_;
-    size_t num_item_;
+    size_t num_item_left_;
+    size_t num_item_right_;
 
     //////////////////////////// Defined in config.ini ///////////////////////////////
     
-    int is_multifile_;
     int calc_in_mem_;
     int top_reserve_;
     float lambda_;
@@ -43,28 +47,30 @@ private:
     float sigma_;
     int progress_num_;
     // 读数据过滤的行为分数范围: score_min_ <= x <= score_max_
-    int score_min_;         
+    int score_min_;
     int score_max_;
 
     int BUFFERCNT;
     int SORTMEMSIZE;
     int DISK_CACHE;
+    bool is_double_behavior_;
     
 ///////////////////////////////////////////////////////////
 
+    typedef vector<MatrixInvert> T_v_ivt;
 private:
     bool SourceDataManage();
 
-    bool LoadData(const string&);
-    bool LoadMultiData(const string&);
-    bool MakeMatrixP2U(const string&);
-    bool MakeMatrixU2P(const string&);
+    bool LoadData(string, string);
+    bool LoadData_(string, string, vector<int>&, bool);
+    bool MakeMatrixP2U(string);
+    bool MakeMatrixU2P(string);
     bool Train();
     bool TrainInMem();
     bool OutputTxt();
     bool OutputTxtFormat();
     float guassian(int);
-    void normalize(vector<MatrixInvert>&, float);
+    void normalize(T_v_ivt&, float);
+    double get_score(T_v_ivt::iterator, T_v_ivt::iterator);
 };
-
 

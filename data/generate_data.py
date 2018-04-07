@@ -9,15 +9,15 @@ import sys
 import random as rd
 
 output = "train.txt"
-data_num = 100000
-max_uid  = 1000
-max_pid  = 100
+data_num = 1000000
+max_uid  = 100000
+max_pid  = 10000
 max_score = 5
 time_from = 1483200000
 time_to   = 1505282614
 
 def main():
-    num = data_num 
+    num = data_num
     wf = open(output, 'w')
     if len(sys.argv) > 1:
         num = int(sys.argv[1])

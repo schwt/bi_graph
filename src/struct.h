@@ -44,6 +44,7 @@ struct DataNode {
 };
 
 struct MatrixIndex {
+    int id;
     float norm;   // sum of scores in invert list
     int count;
     long long offset;
