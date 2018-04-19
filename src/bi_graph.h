@@ -41,6 +41,7 @@ private:
     //////////////////////////// Defined in config.ini ///////////////////////////////
     
     int calc_in_mem_;
+    int if_norm_result_;
     int top_reserve_;
     float lambda_;
     float rho_;

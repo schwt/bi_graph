@@ -59,7 +59,8 @@ bool BiGraph::ReadConfigFile(string s_f_config)
     if (!(res = ReadConfig.ReadInto("file", "sim_item_ivt",  F_output_ivt_))) return res;
     if (!(res = ReadConfig.ReadInto("file", "sim_item_txt",  F_output_txt_))) return res;
     
-    if (!(res = ReadConfig.ReadInto("switch", "calc_in_mem",  calc_in_mem_))) return res;
+    if (!(res = ReadConfig.ReadInto("switch", "calc_in_mem",    calc_in_mem_))) return res;
+    if (!(res = ReadConfig.ReadInto("switch", "if_norm_result", if_norm_result_))) return res;
 
     if (!(res = ReadConfig.ReadInto("data", "score_min", score_min_))) return res;
     if (!(res = ReadConfig.ReadInto("data", "score_max", score_max_))) return res;
@@ -621,6 +622,12 @@ bool BiGraph::TrainInMem() {
         buff_cnt = 0;
         int len =  Min(top_reserve_, (int)vec_ivt_score.size());
         partial_sort(vec_ivt_score.begin(), vec_ivt_score.begin() + len, vec_ivt_score.end() );
+        if (if_norm_result_ == 1) {
+            double max = vec_ivt_score[0].score != 0? vec_ivt_score[0].score: 1;
+            for (int i = 0; i < len; i++) {
+                vec_ivt_score[i].score /= max;
+            }
+        }
 
         index_node.id     = vec_item_id_left_[pid];
         index_node.norm   = sum;
