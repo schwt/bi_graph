@@ -219,7 +219,7 @@ bool BiGraph::LoadData_(string src, string dst, vector<int>& vec_item_id, bool i
     logger.log("load data from: " + src);
     FILE *fp_dst = fopen(dst.c_str(), "wb");
     if (!fp_dst) {
-        logger.log(__LINE__, false, "error open file " + dst + "!");
+        logger.log(__LINE__, false, "error open file " + dst);
         return false;
     }
     string line;
@@ -235,7 +235,9 @@ bool BiGraph::LoadData_(string src, string dst, vector<int>& vec_item_id, bool i
     hash_map<int, int>::iterator itp;
 
     vector<string> vec_files = filesOfPath(src);
+    sort(vec_files.begin(), vec_files.end());
     for (size_t i = 0; i < vec_files.size(); i++) {
+        printf("\t%s\n", vec_files[i].c_str());
         ifstream fin(vec_files[i].c_str());
         while (getline (fin, line)) {
             cnt1++;
@@ -280,7 +282,7 @@ bool BiGraph::LoadData_(string src, string dst, vector<int>& vec_item_id, bool i
                 idc = 0;
             }
         }
-        fin.close();
+        // fin.close();
     }
     if (idc > 0) {
         fwrite(&buff[0], sizeof(DataNode), idc, fp_dst);
@@ -312,7 +314,15 @@ void BiGraph::normalize(T_v_ivt& vec, float norm) {
 bool BiGraph::MakeMatrixU2P(string f_src) {
     logger.log("-------------MakeMatrixU2P-------------");
     FILE* fp_src = fopen(f_src.c_str(), "rb");
+    if (!fp_src) {
+        logger.log(__LINE__, false, "error open file "+f_src+"!");
+        return false;
+    }
     FILE* fp_ivt = fopen(F_matrix_ivt_item_.c_str(), "wb");
+    if (!fp_ivt) {
+        logger.log(__LINE__, false, "error open file "+F_matrix_ivt_item_+"!");
+        return false;
+    }
     int from = 0;
     float norm = 0.0;
     DataNode     node;
@@ -389,7 +399,15 @@ bool BiGraph::MakeMatrixU2P(string f_src) {
 bool BiGraph::MakeMatrixP2U(string f_src) {
     logger.log("-------------MakeMatrixP2U-------------");
     FILE* fp_src = fopen(f_src.c_str(), "rb");
-    FILE* fp_ivt= fopen(F_matrix_ivt_user_.c_str(), "wb");
+    if (!fp_src) {
+        logger.log(__LINE__, false, "error open file "+f_src+"!");
+        return false;
+    }
+    FILE* fp_ivt = fopen(F_matrix_ivt_user_.c_str(), "wb");
+    if (!fp_ivt) {
+        logger.log(__LINE__, false, "error open file "+F_matrix_ivt_user_+"!");
+        return false;
+    }
     int from = 0;
     float norm = 0.0;
     DataNode     node;
@@ -480,10 +498,18 @@ double BiGraph::get_score(T_v_ivt::iterator node1, T_v_ivt::iterator node2) {
 bool BiGraph::Train() {
     logger.log("-------------Train-------------");
     FILE* fp_ivt_user =  fopen(F_matrix_ivt_user_.c_str(),  "rb");
+    if (!fp_ivt_user) {
+        logger.log(__LINE__, false, "error open file "+F_matrix_ivt_user_+"!");
+        return false;
+    }
     FILE* fp_ivt_item =  fopen(F_matrix_ivt_item_.c_str(),  "rb");
+    if (!fp_ivt_item) {
+        logger.log(__LINE__, false, "error open file "+F_matrix_ivt_item_+"!");
+        return false;
+    }
     FILE* fp_output_ivt =  fopen(F_output_ivt_.c_str(),  "wb");
-    if (!fp_ivt_item || !fp_ivt_user) { 
-        logger.log(__LINE__, false, "ERROR open file!\n"); 
+    if (!fp_output_ivt) {
+        logger.log(__LINE__, false, "error open file "+F_output_ivt_+"!");
         return false;
     }
      
@@ -564,6 +590,10 @@ bool BiGraph::Train() {
 bool BiGraph::TrainInMem() {
     logger.log("-------------Train2-------------");
     FILE* fp_output_ivt =  fopen(F_output_ivt_.c_str(),  "wb");
+    if (!fp_output_ivt) {
+        logger.log(__LINE__, false, "error open file " + F_output_ivt_);
+        return false;
+    }
      
     T_v_ivt vec_ivt_user;
     T_v_ivt vec_ivt_item;
@@ -587,7 +617,7 @@ bool BiGraph::TrainInMem() {
         vec_item_right_norm_[i] = pow(vec_item_right_norm_[i], lambda_) + 1;
     }
     for (size_t pid = 0; pid < num_item_left_; pid ++) {
-        printIdx("==", pid, vec_matrix_idx_item_[pid]);
+        // printIdx("==", pid, vec_matrix_idx_item_[pid]);
         int from_u = vec_matrix_idx_item_[pid].offset / sizeof(MatrixInvert);
         int to_u   = vec_matrix_idx_item_[pid].count + from_u;
         int buff_cnt = 0;
@@ -637,7 +667,7 @@ bool BiGraph::TrainInMem() {
         fwrite(&vec_ivt_score[0], sizeof(SimInvert), len, fp_output_ivt);
         from += len;
         if (pid % progress_num_ == 0) {
-            printf("progress: %.2f%% (%ld)\r", 100.0 * pid / num_item_right_, pid);
+            printf("progress: %.2f%% (%ld)\r", 100.0 * pid / num_item_left_, pid);
             fflush(stdout);
         }
     }
@@ -672,9 +702,13 @@ float BiGraph::guassian(int x) {
 bool BiGraph::OutputTxt() {
     logger.log("-------------OutputTxt-------------");
     FILE *fp_ivt = fopen(F_output_ivt_.c_str(), "rb");
+    if (!fp_ivt) {
+        logger.log(__LINE__, false, "ERROR open files:"+F_output_ivt_);
+        return false;
+    }
     FILE *fp_txt = fopen(F_output_txt_.c_str(), "w");
-    if (!fp_ivt || !fp_txt) {
-        logger.log(__LINE__, false, "ERROR open files!");
+    if (!fp_txt) {
+        logger.log(__LINE__, false, "ERROR open files:"+F_output_txt_);
         return false;
     }
     vector<SimIndex>  vec_idx;
@@ -701,9 +735,13 @@ bool BiGraph::OutputTxt() {
 bool BiGraph::OutputTxtFormat() {
     logger.log("-------------OutputTxtFormat-------------");
     FILE *fp_ivt = fopen(F_output_ivt_.c_str(), "rb");
+    if (!fp_ivt) {
+        logger.log(__LINE__, false, "ERROR open files:"+F_output_ivt_);
+        return false;
+    }
     FILE *fp_txt = fopen(F_output_txt_.c_str(), "w");
-    if (!fp_ivt || !fp_txt) {
-        logger.log(__LINE__, false, "ERROR open files!");
+    if (fp_txt) {
+        logger.log(__LINE__, false, "ERROR open files:"+F_output_txt_);
         return false;
     }
     vector<SimIndex>  vec_idx;
