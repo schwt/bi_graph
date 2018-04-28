@@ -55,6 +55,7 @@ bool BiGraph::ReadConfigFile(string s_f_config)
     if (!(res = ReadConfig.ReadInto("file", "temp_dir",      DIR_temp_))) return res;
     if (!(res = ReadConfig.ReadInto("file", "train_data",    F_train_data_))) return res;
     if (!(res = ReadConfig.ReadInto("file", "train_data_right", F_train_data_right_))) return res;
+    if (!(res = ReadConfig.ReadInto("file", "valid_reco_id", F_valid_reco_id_))) return res;
     if (!(res = ReadConfig.ReadInto("file", "sim_item_idx",  F_output_idx_))) return res;
     if (!(res = ReadConfig.ReadInto("file", "sim_item_ivt",  F_output_ivt_))) return res;
     if (!(res = ReadConfig.ReadInto("file", "sim_item_txt",  F_output_txt_))) return res;
@@ -62,6 +63,7 @@ bool BiGraph::ReadConfigFile(string s_f_config)
     if (!(res = ReadConfig.ReadInto("switch", "calc_in_mem",    calc_in_mem_))) return res;
     if (!(res = ReadConfig.ReadInto("switch", "if_norm_result", if_norm_result_))) return res;
 
+    if (!(res = ReadConfig.ReadInto("data", "delimiter", delimiter_))) return res;
     if (!(res = ReadConfig.ReadInto("data", "score_min", score_min_))) return res;
     if (!(res = ReadConfig.ReadInto("data", "score_max", score_max_))) return res;
     if (!(res = ReadConfig.ReadInto("data", "lambda", lambda_))) return res;
@@ -73,15 +75,16 @@ bool BiGraph::ReadConfigFile(string s_f_config)
     if (!(res = ReadConfig.ReadInto("data", "progress_num", progress_num_))) return res;
     
     logger.log("paremeters");
-    logger.log("\ttrain_data: " + F_train_data_);
-    logger.log("\tsim_item_bin: " +  F_output_ivt_);
-    logger.log("\tsim_item_txt: " +  F_output_txt_);
-    logger.log("\tlambda: " + stringUtils::asString(lambda_));
-    logger.log("\trho: " + stringUtils::asString(rho_));
-    logger.log("\tsigma: " + stringUtils::asString(sigma_));
-    logger.log("\ttop_reserve: " + stringUtils::asString(top_reserve_));
-    logger.log("\tscore_min: " + stringUtils::asString(score_min_));
-    logger.log("\tscore_max: " + stringUtils::asString(score_max_));
+    logger.log("\ttrain_data: "   + F_train_data_);
+    logger.log("\tsim_item_bin: " + F_output_ivt_);
+    logger.log("\tsim_item_txt: " + F_output_txt_);
+    logger.log("\tsim_item_txt: " + F_output_txt_);
+    logger.log("\tlambda: "       + stringUtils::asString(lambda_));
+    logger.log("\trho: "          + stringUtils::asString(rho_));
+    logger.log("\tsigma: "        + stringUtils::asString(sigma_));
+    logger.log("\ttop_reserve: "  + stringUtils::asString(top_reserve_));
+    logger.log("\tscore_min: "    + stringUtils::asString(score_min_));
+    logger.log("\tscore_max: "    + stringUtils::asString(score_max_));
     return res;
 }
 
@@ -208,6 +211,17 @@ bool BiGraph::LoadData(string dst, string dst_right) {
             return res;
         }
     }
+
+    // 加载可推荐结果集
+    if (F_valid_reco_id_ != "") {
+        res = LoadIds(F_valid_reco_id_, vec_item_id_right_, set_valid_reco_id_);
+        if (!res) {
+            logger.log(__LINE__, res, "LoadIds");
+            return res;
+        }
+    }
+
+
     num_item_left_  = vec_item_id_left_.size();
     num_item_right_ = vec_item_id_right_.size();
     num_user_       = hm_user_map_.size();
@@ -233,6 +247,14 @@ bool BiGraph::LoadData_(string src, string dst, vector<int>& vec_item_id, bool i
     hash_map<string, int>::iterator itu;
     hash_map<int, int> hm_item_map;
     hash_map<int, int>::iterator itp;
+    string s_delimiter;
+    if (delimiter_ == 1) s_delimiter = ",";
+    else if (delimiter_ == 2) s_delimiter = " ";
+    else if (delimiter_ == 3) s_delimiter = "\t";
+    else {
+        logger.log(__LINE__, false, "error delimiter setting: " + stringUtils::asString(delimiter_));
+        return false;
+    }
 
     vector<string> vec_files = filesOfPath(src);
     sort(vec_files.begin(), vec_files.end());
@@ -241,7 +263,7 @@ bool BiGraph::LoadData_(string src, string dst, vector<int>& vec_item_id, bool i
         ifstream fin(vec_files[i].c_str());
         while (getline (fin, line)) {
             cnt1++;
-            stringUtils::split(line, " ", sep_vec);
+            stringUtils::split(line, s_delimiter, sep_vec);
             if (sep_vec.size() != 4) continue;
             if (atof(sep_vec[2].c_str() ) <= 0.0) continue;
             string user   = sep_vec[0];
@@ -302,6 +324,38 @@ bool BiGraph::LoadData_(string src, string dst, vector<int>& vec_item_id, bool i
     return true;
 }
 
+bool BiGraph::LoadIds(string f_src, vector<int>& vec_item_id, set<int>& set_dst) {
+    logger.log("------------- LoadIds -------------");
+
+    int cnt     = 0;
+    string line = "";
+    hash_map<int, int> map_id;
+    for (size_t i = 0; i < vec_item_id.size(); i++) {
+        map_id[vec_item_id[i]] = i;
+    }
+    ifstream fin(f_src.c_str());
+    while (getline (fin, line)) {
+        cnt++;
+        int item_id = atoi(line.c_str());
+        hash_map<int, int>::iterator iter = map_id.find(item_id);
+        if (iter != map_id.end()) {
+            int id = iter->second;
+            if (id > 0) {
+                set_dst.insert(id);
+            }
+        }
+    }
+    logger.log("# read line : " + stringUtils::asString(cnt));
+    logger.log("# res lt len: " + stringUtils::asString(set_dst.size()));
+    if (set_dst.size() == 0)
+        return false;
+    int i = 1;
+    for (set<int>::iterator iter = set_dst.begin(); iter != set_dst.end(); iter++) {
+        printf("%d: %d\n", i++, *iter);
+    }
+    return true;
+}
+
 void BiGraph::normalize(T_v_ivt& vec, float norm) {
     for (size_t i = 0; i < vec.size(); i++) {
         vec[i].score /= pow(norm, rho_) + 1;
@@ -323,8 +377,9 @@ bool BiGraph::MakeMatrixU2P(string f_src) {
         logger.log(__LINE__, false, "error open file "+F_matrix_ivt_item_+"!");
         return false;
     }
-    int from = 0;
+    int from   = 0;
     float norm = 0.0;
+    bool if_filter = set_valid_reco_id_.size() > 0;
     DataNode     node;
     MatrixIndex   strt_index;
     MatrixInvert  strt_invert;
@@ -351,6 +406,8 @@ bool BiGraph::MakeMatrixU2P(string f_src) {
         int size = fread(readbuf, sizeof(DataNode), BUFFERCNT, fp_src);
 
         for (int i = 0; i < size; ++i) {
+            if (if_filter && set_valid_reco_id_.find(readbuf[i].item_id) == set_valid_reco_id_.end())
+                continue;
             if (uid_old != readbuf[i].user_id) {
                 strt_index.norm   = norm;
                 strt_index.count  = (int)vec_invert_buf.size();

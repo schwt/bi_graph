@@ -20,6 +20,7 @@ private:
     // files
     string F_train_data_;
     string F_train_data_right_;
+    string F_valid_reco_id_;
     string F_output_idx_;
     string F_output_ivt_;
     string F_output_txt_;
@@ -27,6 +28,7 @@ private:
     string F_matrix_ivt_user_;
     string F_matrix_ivt_item_;
 
+    set<int> set_valid_reco_id_;
     hash_map<string, int> hm_user_map_;
     vector<int> vec_item_id_left_;
     vector<int> vec_item_id_right_;
@@ -47,9 +49,12 @@ private:
     float rho_;
     float sigma_;
     int progress_num_;
+
     // 读数据过滤的行为分数范围: score_min_ <= x <= score_max_
     int score_min_;
     int score_max_;
+    // 数据源分隔符
+    int delimiter_;
 
     int BUFFERCNT;
     int SORTMEMSIZE;
@@ -62,6 +67,7 @@ private:
 private:
     bool SourceDataManage();
 
+    bool LoadIds(string, vector<int>&, set<int>&);
     bool LoadData(string, string);
     bool LoadData_(string, string, vector<int>&, bool);
     bool MakeMatrixP2U(string);
