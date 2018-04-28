@@ -14,6 +14,7 @@ private:
     bool ReadConfigFile(string file_config);
 private:
     Logger logger;
+    uSTL ustl;
 
     //////////////////////////// new ///////////////////////////////
     string DIR_temp_;

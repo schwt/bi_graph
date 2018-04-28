@@ -272,19 +272,15 @@ bool BiGraph::LoadData_(string src, string dst, vector<int>& vec_item_id, bool i
             int timestamp = atoi(sep_vec[3].c_str());
             if (score < score_min_ || score > score_max_) continue;
 
-            itu = hm_user_map_.find(user);
-            if (itu == hm_user_map_.end()) {
-                mapped_uid = hm_user_map_.size();
+            mapped_uid = ustl.get(hm_user_map_, user, (int)hm_user_map_.size());
+            if (mapped_uid == (int)hm_user_map_.size()) {
                 hm_user_map_.insert(make_pair(user, mapped_uid));
-            } else
-                mapped_uid = itu->second;
+            }
 
-            itp = hm_item_map.find(item);
-            if (itp == hm_item_map.end()) {
-                mapped_pid = hm_item_map.size();
+            mapped_pid = ustl.get(hm_item_map, item, (int)hm_item_map.size());
+            if (mapped_pid == (int)hm_item_map.size()) {
                 hm_item_map.insert(make_pair(item, mapped_pid));
-            } else
-                mapped_pid = itp->second;
+            }
 
             if (if_stat_item_norm) {
                 if (mapped_pid+1 > (int)vec_item_right_norm_.size()) {
@@ -337,22 +333,15 @@ bool BiGraph::LoadIds(string f_src, vector<int>& vec_item_id, set<int>& set_dst)
     while (getline (fin, line)) {
         cnt++;
         int item_id = atoi(line.c_str());
-        hash_map<int, int>::iterator iter = map_id.find(item_id);
-        if (iter != map_id.end()) {
-            int id = iter->second;
-            if (id > 0) {
-                set_dst.insert(id);
-            }
+        int id = ustl.get(map_id, item_id, -1);
+        if (id > 0) {
+            set_dst.insert(id);
         }
     }
     logger.log("# read line : " + stringUtils::asString(cnt));
     logger.log("# res lt len: " + stringUtils::asString(set_dst.size()));
     if (set_dst.size() == 0)
         return false;
-    int i = 1;
-    for (set<int>::iterator iter = set_dst.begin(); iter != set_dst.end(); iter++) {
-        printf("%d: %d\n", i++, *iter);
-    }
     return true;
 }
 
@@ -406,7 +395,7 @@ bool BiGraph::MakeMatrixU2P(string f_src) {
         int size = fread(readbuf, sizeof(DataNode), BUFFERCNT, fp_src);
 
         for (int i = 0; i < size; ++i) {
-            if (if_filter && set_valid_reco_id_.find(readbuf[i].item_id) == set_valid_reco_id_.end())
+            if (if_filter && !ustl.contain(set_valid_reco_id_, readbuf[i].item_id))
                 continue;
             if (uid_old != readbuf[i].user_id) {
                 strt_index.norm   = norm;
