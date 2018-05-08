@@ -50,6 +50,7 @@ private:
     float rho_;
     float sigma_;
     int progress_num_;
+    float score_threshold_;
 
     // 读数据过滤的行为分数范围: score_min_ <= x <= score_max_
     int score_min_;

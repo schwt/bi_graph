@@ -27,7 +27,7 @@ cnt1 = 1
 for line in file(f_src):
     cnt0 += 1
     try:
-        id, recos = line.strip().split("\t")
+        id, recos = line.strip(" ,\t\n\r").split("\t")
         sep = recos.split(",")
         id = int(id)
         wf.write("[%d] \t m=%d \t len=%d \t\t %s\n" % (cnt1, id, len(sep), d_name.get(id, "null")))

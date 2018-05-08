@@ -64,6 +64,7 @@ bool BiGraph::ReadConfigFile(string s_f_config)
     if (!(res = ReadConfig.ReadInto("switch", "calc_in_mem",    calc_in_mem_))) return res;
     if (!(res = ReadConfig.ReadInto("switch", "if_norm_result", if_norm_result_))) return res;
 
+    if (!(res = ReadConfig.ReadInto("data", "score_threshold", score_threshold_, 0.0f))) return res;
     if (!(res = ReadConfig.ReadInto("data", "delimiter", delimiter_))) return res;
     if (!(res = ReadConfig.ReadInto("data", "score_min", score_min_))) return res;
     if (!(res = ReadConfig.ReadInto("data", "score_max", score_max_))) return res;
@@ -80,6 +81,7 @@ bool BiGraph::ReadConfigFile(string s_f_config)
     logger.log("\tsim_item_bin: " + F_output_ivt_);
     logger.log("\tsim_item_txt: " + F_output_txt_);
     logger.log("\tsim_item_txt: " + F_output_txt_);
+    logger.log("\tscore_thresh: " + stringUtils::asString(score_threshold_));
     logger.log("\tlambda: "       + stringUtils::asString(lambda_));
     logger.log("\trho: "          + stringUtils::asString(rho_));
     logger.log("\tsigma: "        + stringUtils::asString(sigma_));
@@ -635,7 +637,7 @@ bool BiGraph::Train() {
 }
 
 bool BiGraph::TrainInMem() {
-    logger.log("-------------Train2-------------");
+    logger.log("-------------TrainInMem-------------");
     FILE* fp_output_ivt =  fopen(F_output_ivt_.c_str(),  "wb");
     if (!fp_output_ivt) {
         logger.log(__LINE__, false, "error open file " + F_output_ivt_);
@@ -689,9 +691,10 @@ bool BiGraph::TrainInMem() {
         float sum = 0.0;
         vec_ivt_score.resize(buff_cnt);
         for (int i = 0; i < buff_cnt; i++) {
-            int id = vec_buff_id[i];
+            int id      = vec_buff_id[i];
+            float score = vec_buff_score[id] / vec_item_right_norm_[id];
             vec_ivt_score[i].id    = vec_item_id_right_[id];
-            vec_ivt_score[i].score = vec_buff_score[id] / vec_item_right_norm_[id];
+            vec_ivt_score[i].score = score;
             sum += vec_ivt_score[i].score;
             vec_buff_id[i] = 0;
             vec_buff_score[id] = 0;
@@ -765,11 +768,12 @@ bool BiGraph::OutputTxt() {
         if (vec_idx[i].count == 0) continue;
         fprintf(fp_txt, "%d\t", vec_idx[i].id);
         ReadInvert(fp_ivt, vec_idx[i], vec_ivt);
+        int wcnt = 0;
         for (size_t j = 0; j < vec_ivt.size(); j++) {
-            fprintf(fp_txt, "%d:%f", vec_ivt[j].id, vec_ivt[j].score);
-            if (j != vec_ivt.size() -1) {
-                fprintf(fp_txt, ",");
-            }
+            if (vec_ivt[j].score <= score_threshold_)
+                continue;
+            if (wcnt++ > 0) fprintf(fp_txt, ",");
+            fprintf(fp_txt, "%d:%g", vec_ivt[j].id, vec_ivt[j].score);
         }
         if (i != vec_idx.size()-1) {
             fprintf(fp_txt, "\n");
@@ -799,7 +803,7 @@ bool BiGraph::OutputTxtFormat() {
                 i, vec_idx[i].id, vec_idx[i].norm, vec_idx[i].count, vec_idx[i].offset);
         ReadInvert(fp_ivt, vec_idx[i], vec_ivt);
         for (size_t j = 0; j < vec_ivt.size(); j++) {
-            fprintf(fp_txt, "\t[%ld]\tid=%d\tscore=%f\n", 
+            fprintf(fp_txt, "\t[%ld]\tid=%d\tscore=%g\n", 
                     j, vec_ivt[j].id, vec_ivt[j].score);
         }
     }
