@@ -51,11 +51,12 @@ bool BiGraph::ReadConfigFile(string s_f_config)
     Config ReadConfig(s_f_config);
 
     bool res = true;
+    string snull = "";
 
     if (!(res = ReadConfig.ReadInto("file", "temp_dir",      DIR_temp_))) return res;
     if (!(res = ReadConfig.ReadInto("file", "train_data",    F_train_data_))) return res;
-    if (!(res = ReadConfig.ReadInto("file", "train_data_right", F_train_data_right_))) return res;
-    if (!(res = ReadConfig.ReadInto("file", "valid_reco_id", F_valid_reco_id_))) return res;
+    if (!(res = ReadConfig.ReadInto("file", "train_data_right", F_train_data_right_, snull))) return res;
+    if (!(res = ReadConfig.ReadInto("file", "valid_reco_id", F_valid_reco_id_, snull))) return res;
     if (!(res = ReadConfig.ReadInto("file", "sim_item_idx",  F_output_idx_))) return res;
     if (!(res = ReadConfig.ReadInto("file", "sim_item_ivt",  F_output_ivt_))) return res;
     if (!(res = ReadConfig.ReadInto("file", "sim_item_txt",  F_output_txt_))) return res;
