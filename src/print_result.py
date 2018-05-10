@@ -35,7 +35,7 @@ for line in file(f_src):
         for kv in sep:
             k,v = kv.split(":")
             rid = int(k)
-            wf.write("\t[%2d]\t %d\t %s\t %s\n" % (cnt2, rid, v, d_name.get(rid, "null")))
+            wf.write("\t[%2d]\t %-9d\t %-8s\t %s\n" % (cnt2, rid, v, d_name.get(rid, "null")))
             cnt2 += 1
         cnt1 += 1
         wf.write("\n")
