@@ -4,11 +4,15 @@ import sys
 
 s_sep = "\t"
 
+count = 0
 f_src    = sys.argv[1]
 f_dst    = sys.argv[2]
 f_name   = sys.argv[3]
 idc_id   = int(sys.argv[4])
 idc_name = int(sys.argv[5])
+if len(sys.argv) >= 7:
+    count = int(sys.argv[6])
+
 
 
 d_name = {}
@@ -38,6 +42,8 @@ for line in file(f_src):
             wf.write("\t[%2d]\t %-9d\t %-8s\t %s\n" % (cnt2, rid, v, d_name.get(rid, "null")))
             cnt2 += 1
         cnt1 += 1
+        if count > 0 and cnt1 > count:
+            break
         wf.write("\n")
     except:
         print "error line: (%s)" % line.strip()
