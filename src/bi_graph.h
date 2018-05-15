@@ -33,7 +33,7 @@ private:
     hash_map<string, int> hm_user_map_;
     vector<int> vec_item_id_left_;
     vector<int> vec_item_id_right_;
-    vector<int> vec_item_right_norm_;
+    vector<double> vec_item_right_norm_;
 
     vector<MatrixIndex> vec_matrix_idx_user_;
     vector<MatrixIndex> vec_matrix_idx_item_;

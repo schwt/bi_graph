@@ -350,7 +350,7 @@ bool BiGraph::LoadIds(string f_src, vector<int>& vec_item_id, set<int>& set_dst)
 
 void BiGraph::normalize(T_v_ivt& vec, float norm) {
     for (size_t i = 0; i < vec.size(); i++) {
-        vec[i].score /= pow(norm, rho_) + 1;
+        vec[i].score /= pow(norm, rho_);
     }
 }
     
@@ -575,7 +575,7 @@ bool BiGraph::Train() {
     int from = 0;
 
     for (size_t i = 0; i < vec_item_right_norm_.size(); i++) {
-        vec_item_right_norm_[i] = pow(vec_item_right_norm_[i], lambda_) + 1;
+        vec_item_right_norm_[i] = pow(vec_item_right_norm_[i], lambda_);
     }
     for (size_t pid = 0; pid < num_item_left_; pid ++) {
         if (vec_matrix_idx_item_[pid].count == 0) continue;
@@ -663,7 +663,7 @@ bool BiGraph::TrainInMem() {
     timer.StartTiming();
 
     for (size_t i = 0; i < vec_item_right_norm_.size(); i++) {
-        vec_item_right_norm_[i] = pow(vec_item_right_norm_[i], lambda_) + 1;
+        vec_item_right_norm_[i] = pow(vec_item_right_norm_[i], lambda_);
     }
     for (size_t pid = 0; pid < num_item_left_; pid ++) {
         // printIdx("==", pid, vec_matrix_idx_item_[pid]);
