@@ -16,7 +16,7 @@ function main {
 
     ${HADOOP} jar ${HADOOP_STREAM} \
             -D mapreduce.job.maps=200 \
-            -D mapreduce.job.reduces=100 \
+            -D mapreduce.job.reduces=2000 \
             -D mapreduce.reduce.memory.mb=8192\
             -D mapreduce.map.memory.mb=8192\
             -D mapreduce.map.java.opts="$javaOpt" \

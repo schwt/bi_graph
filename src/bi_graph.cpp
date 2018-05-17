@@ -61,16 +61,16 @@ bool BiGraph::ReadConfigFile(string s_f_config)
     if (!(res = ReadConfig.ReadInto("file", "sim_item_ivt",  F_output_ivt_))) return res;
     if (!(res = ReadConfig.ReadInto("file", "sim_item_txt",  F_output_txt_))) return res;
     
+    if (!(res = ReadConfig.ReadInto("switch", "delimiter",      delimiter_))) return res;
     if (!(res = ReadConfig.ReadInto("switch", "calc_in_mem",    calc_in_mem_))) return res;
     if (!(res = ReadConfig.ReadInto("switch", "if_norm_result", if_norm_result_))) return res;
 
     if (!(res = ReadConfig.ReadInto("data", "score_threshold", score_threshold_, 0.0f))) return res;
-    if (!(res = ReadConfig.ReadInto("data", "delimiter", delimiter_))) return res;
     if (!(res = ReadConfig.ReadInto("data", "score_min", score_min_))) return res;
     if (!(res = ReadConfig.ReadInto("data", "score_max", score_max_))) return res;
     if (!(res = ReadConfig.ReadInto("data", "lambda", lambda_))) return res;
     if (!(res = ReadConfig.ReadInto("data", "rho",    rho_))) return res;
-    if (!(res = ReadConfig.ReadInto("data", "sigma",  sigma_))) return res;
+    if (!(res = ReadConfig.ReadInto("data", "tau",  tau_))) return res;
     if (!(res = ReadConfig.ReadInto("data", "top_reserve",  top_reserve_))) return res;
     if (!(res = ReadConfig.ReadInto("data", "BUFFERCNT",    BUFFERCNT))) return res;
     if (!(res = ReadConfig.ReadInto("data", "SORTMEMSIZE",  SORTMEMSIZE))) return res;
@@ -84,7 +84,7 @@ bool BiGraph::ReadConfigFile(string s_f_config)
     logger.log("\tscore_thresh: " + stringUtils::asString(score_threshold_));
     logger.log("\tlambda: "       + stringUtils::asString(lambda_));
     logger.log("\trho: "          + stringUtils::asString(rho_));
-    logger.log("\tsigma: "        + stringUtils::asString(sigma_));
+    logger.log("\tsigma: "        + stringUtils::asString(tau_));
     logger.log("\ttop_reserve: "  + stringUtils::asString(top_reserve_));
     logger.log("\tscore_min: "    + stringUtils::asString(score_min_));
     logger.log("\tscore_max: "    + stringUtils::asString(score_max_));
@@ -746,7 +746,7 @@ bool BiGraph::TrainInMem() {
 }
 
 float BiGraph::guassian(int x) {
-    return exp(-1.0 * x * x / 2.0 / sigma_/sigma_);
+    return exp(-1.0 * x * x / 2.0 / tau_/tau_);
 }
     
 bool BiGraph::OutputTxt() {

@@ -48,7 +48,7 @@ private:
     int top_reserve_;
     float lambda_;
     float rho_;
-    float sigma_;
+    float tau_;
     int progress_num_;
     float score_threshold_;
 

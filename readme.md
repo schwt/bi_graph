@@ -1,7 +1,27 @@
 # note
 An implementation of **bipartite graph(network)** algorithm.
 
-### stats of time used
+## usage:
+#### input format:
+`uid,pid,rating,timestamp`
+- supported dilimeter: `",", " ", "\t"`, can be set in `config.ini`
+- input data support one file or a whole directory (recurent child directory willnot be readed)
+
+### config setting
+#### 1. train effect
+- `lambda`: hot item punishing
+- `rho`: hot user punishing
+- `tau`: decay time scale(unit=second) between to behaviors
+#### 2. application types
+- `train_data_right`(optional): use for double behavior type
+- `valid_reco_id`(optional): limit valid reco item set
+
+### running
+- build: `make clean; make`
+- running: `./graph config.ini`
+
+
+## stats of time used
 #### 1
 - data: 10000w
 - user:   100w
