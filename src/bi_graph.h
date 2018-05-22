@@ -45,6 +45,8 @@ private:
     
     int calc_in_mem_;
     int if_norm_result_;
+    int only_read_bin_;
+    int time_decay_type_;
     int top_reserve_;
     float lambda_;
     float rho_;
@@ -78,7 +80,9 @@ private:
     bool TrainInMem();
     bool OutputTxt();
     bool OutputTxtFormat();
+    float decay(int);
     float guassian(int);
+    float half_decay(int);
     void normalize(T_v_ivt&, float);
     double get_score(T_v_ivt::iterator, T_v_ivt::iterator);
 };

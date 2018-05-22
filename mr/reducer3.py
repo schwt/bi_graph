@@ -3,7 +3,7 @@
 import sys
 from math import exp
 
-# pid: (pid, score)
+# pid: {(pid:score), (), ...}
 #   =>
 # pid: [(pid, score'), (), ...]
 
@@ -25,15 +25,14 @@ if __name__ == '__main__':
         if len(info) != 2:
             continue
         mid = info[0]
-        pid, score = info[1].split(',')
-        score = float(score)
+        indata = eval(info[1])
         if mid != old_id:
             if len(buff) > 0:
                 print "%s\t%s" % (old_id, output_reduce(buff))
             buff = {}
             old_id = mid
-        ret = buff.get(pid, 0)
-        buff[pid] = ret + score
+        for p, s in indata.iteritems():
+            buff[p] = s + buff.get(p, 0)
 
     if len(buff) > 0:
         print "%s\t%s" % (old_id, output_reduce(buff))

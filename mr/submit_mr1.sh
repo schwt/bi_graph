@@ -18,11 +18,11 @@ function main {
     ${HADOOP} jar ${HADOOP_STREAM} \
             -D mapreduce.job.maps=200 \
             -D mapreduce.job.reduces=100 \
-            -D mapreduce.reduce.memory.mb=8192\
             -D mapreduce.map.memory.mb=8192\
+            -D mapreduce.reduce.memory.mb=8192\
+            -D mapreduce.jobtracker.maxreducememory.mb=8192 \
             -D mapreduce.map.java.opts="$javaOpt" \
             -D mapreduce.reduce.java.opts="$javaOpt" \
-            -D mapreduce.jobtracker.maxreducememory.mb=8192 \
             -D mapreduce.job.name="${name}"  \
             -mapper "python ${mapper}" \
             -reducer "python ${reducer} ${LAMBDA}" \
@@ -32,5 +32,10 @@ function main {
             -output ${OUTPUT}
 }
 
+
+t0=`timestamp`
 main
+datetime
+tt=`timediff $t0`
+echo "job1 time: ${tt}s"
 

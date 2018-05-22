@@ -61,9 +61,11 @@ bool BiGraph::ReadConfigFile(string s_f_config)
     if (!(res = ReadConfig.ReadInto("file", "sim_item_ivt",  F_output_ivt_))) return res;
     if (!(res = ReadConfig.ReadInto("file", "sim_item_txt",  F_output_txt_))) return res;
     
-    if (!(res = ReadConfig.ReadInto("switch", "delimiter",      delimiter_))) return res;
-    if (!(res = ReadConfig.ReadInto("switch", "calc_in_mem",    calc_in_mem_))) return res;
-    if (!(res = ReadConfig.ReadInto("switch", "if_norm_result", if_norm_result_))) return res;
+    if (!(res = ReadConfig.ReadInto("switch", "delimiter",      delimiter_, 1))) return res;
+    if (!(res = ReadConfig.ReadInto("switch", "calc_in_mem",    calc_in_mem_, 1))) return res;
+    if (!(res = ReadConfig.ReadInto("switch", "if_norm_result", if_norm_result_, 1))) return res;
+    if (!(res = ReadConfig.ReadInto("switch", "only_read_bin",  only_read_bin_, 0))) return res;
+    if (!(res = ReadConfig.ReadInto("switch", "time_decay_type",time_decay_type_, 1))) return res;
 
     if (!(res = ReadConfig.ReadInto("data", "score_threshold", score_threshold_, 0.0f))) return res;
     if (!(res = ReadConfig.ReadInto("data", "score_min", score_min_))) return res;
@@ -98,6 +100,15 @@ bool BiGraph::Calc()
 
     F_matrix_ivt_user_ = DIR_temp_ + "matrix_user.ivt";
     F_matrix_ivt_item_ = DIR_temp_ + "matrix_item.ivt";
+
+    // 只从旧二进制倒排索引数据转成文本
+    if (only_read_bin_) {
+        res = OutputTxt();
+        if (!res) {
+            logger.log(__LINE__, res, "OutputTxt");
+        }
+        return res;
+    }
 
     res = SourceDataManage();
     if (!res) {
@@ -541,7 +552,7 @@ void printIvt(string s, MatrixInvert node) {
 }
 
 double BiGraph::get_score(T_v_ivt::iterator node1, T_v_ivt::iterator node2) {
-    return node1->score * node2->score * guassian(node1->timestamp - node2->timestamp);
+    return node1->score * node2->score * decay(node1->timestamp - node2->timestamp);
 }
 
 bool BiGraph::Train() {
@@ -745,10 +756,19 @@ bool BiGraph::TrainInMem() {
     return res;
 }
 
+float BiGraph::decay(int x) {
+    if (time_decay_type_ == 1) return half_decay(x);
+    if (time_decay_type_ == 2) return guassian(x);
+    return half_decay(x);
+}
+float BiGraph::half_decay(int x) {
+    return exp2(-1.0 * abs(x) /  tau_) * 0.9 + 0.1;
+}
 float BiGraph::guassian(int x) {
+    // return exp(-1.0 * x * x / 2.0 / tau_/tau_) * 0.9 + 0.1;
     return exp(-1.0 * x * x / 2.0 / tau_/tau_);
 }
-    
+
 bool BiGraph::OutputTxt() {
     logger.log("-------------OutputTxt-------------");
     FILE *fp_ivt = fopen(F_output_ivt_.c_str(), "rb");
@@ -770,8 +790,8 @@ bool BiGraph::OutputTxt() {
         ReadInvert(fp_ivt, vec_idx[i], vec_ivt);
         int wcnt = 0;
         for (size_t j = 0; j < vec_ivt.size(); j++) {
-            if (vec_ivt[j].score <= score_threshold_)
-                continue;
+            // if (vec_ivt[j].score <= score_threshold_)
+            //     continue;
             if (wcnt++ > 0) fprintf(fp_txt, ",");
             fprintf(fp_txt, "%d:%g", vec_ivt[j].id, vec_ivt[j].score);
         }
