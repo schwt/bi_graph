@@ -5,7 +5,7 @@ from math import exp
 
 # pid: {(pid:score), (), ...}
 #   =>
-# pid: [(pid, score'), (), ...]
+# pid: [(pid, sum_score), (), ...]
 
 length  = int(sys.argv[1])
 if_norm = int(sys.argv[2])

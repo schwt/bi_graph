@@ -2,12 +2,16 @@
 . ./config.sh
 
 name="${job_name}_job1"
-INPUT="${source_data}"
+INPUT=`path_list ${source_path} ${days}`
+# INPUT="hdfs://hz-cluster6/user/kaolarec/hive_db/kaola_rec_algo.db/wyb_action_goods/day=2018-08-04"
 OUTPUT="${hdfs_tmp_dir}/output1"
 mapper="mapper1.py"
 reducer="reducer1.py"
 LAMBDA="${lambda}"
 
+echo "`datetime` start Job: ${name}"
+echo "`datetime` dates:"
+date_range ${days}
 
 function main {
 
@@ -24,7 +28,7 @@ function main {
             -D mapreduce.map.java.opts="$javaOpt" \
             -D mapreduce.reduce.java.opts="$javaOpt" \
             -D mapreduce.job.name="${name}"  \
-            -mapper "python ${mapper}" \
+            -mapper  "python ${mapper} ${idc_uid} ${idc_pid} ${idc_rate} ${idc_time}" \
             -reducer "python ${reducer} ${LAMBDA}" \
             -file "${mapper}" \
             -file "${reducer}" \
@@ -35,7 +39,6 @@ function main {
 
 t0=`timestamp`
 main
-datetime
 tt=`timediff $t0`
-echo "job1 time: ${tt}s"
+echo "`datetime` job1 time: ${tt}s"
 

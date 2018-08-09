@@ -8,6 +8,7 @@ reducer="reducer2.py"
 RHO="${rho}"
 Tau="${tau}"
 
+echo "`datetime` start Job: ${name}"
 function main {
 
     javaOpt=" -Xms2012m -Xmx2012m -XX:MaxPermSize=256m -XX:-UseGCOverheadLimit -XX:+UseConcMarkSweepGC -XX:MaxDirectMemorySize=256m"
@@ -33,7 +34,6 @@ function main {
 
 t0=`timestamp`
 main
-datetime
 tt=`timediff $t0`
-echo "job2 time: ${tt}s"
+echo "`datetime` job2 time: ${tt}s"
 

@@ -5,15 +5,13 @@ from math import exp
 
 # uid: (pid, rate, time, sum_p)
 #   =>
-# uid: [(pid, rate,time, sum_p), (), ...]
-#   =>
-# pid: (pid, score)
+# uid: [(pid, rate,time, sum_p), (), ...]  (hide uid)
 
 buff = []
 old_id = "aljsdkljg"
 
 def output_reduce(data):
-    print "xx\t%s" % ";".join("%s,%s,%s,%s" % x for x in data)
+    print ";".join("%s,%s,%s,%s" % x for x in data)
 
 
 if __name__ == '__main__':

@@ -30,7 +30,8 @@ cnt0 = 0
 cnt1 = 1
 for line in file(f_src):
     cnt0 += 1
-    try:
+    if 1:
+    # try:
         id, recos = line.strip(" ,\t\n\r").split("\t")
         sep = recos.split(",")
         id = int(id)
@@ -45,7 +46,8 @@ for line in file(f_src):
         if count > 0 and cnt1 > count:
             break
         wf.write("\n")
-    except:
+    else:
+    # except:
         print "error line: (%s)" % line.strip()
         continue
 wf.close()
