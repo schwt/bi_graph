@@ -8,11 +8,14 @@ cd $dir0
 
 t0=`timestamp`
 datetime
-./submit_mr1.sh
+if ! ./submit_mr1.sh; then
+    exit 1; fi
 
-./submit_mr2.sh
+if ! ./submit_mr2.sh; then
+    exit 1; fi
 
-./submit_mr3.sh
+if ! ./submit_mr3.sh; then
+    exit 1; fi
 
 tt=`timediff $t0`
 echo "total time: ${tt}s"
