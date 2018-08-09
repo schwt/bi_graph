@@ -17,6 +17,7 @@ datetime
 tt=`timediff $t0`
 echo "total time: ${tt}s"
 
+mv ${output_file} ${output_file}.bak
 hadoop fs -getmerge ${hdfs_tmp_dir}/output3 ${output_file}
 
 

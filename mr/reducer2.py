@@ -29,6 +29,7 @@ if __name__ == '__main__':
                 output_reduce(buff)
             buff = []
             old_id = uid
+        if pid == "\N": continue
         buff.append((pid, rate, time, sum_p))
 
     if len(buff) > 1:
