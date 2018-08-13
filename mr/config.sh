@@ -7,6 +7,7 @@ HADOOP_STREAM="${HADOOP_DIR}/share/hadoop/tools/lib/hadoop-streaming-2.7.3.jar"
 job_name="bi_graph"
 hdfs_tmp_dir=""
 source_path=""
+filter_recoIds=""                        # 如果结果需要过滤的，有效item集放此文件
 output_file="./data/result.txt"
 
 ##### 使用数据天数
