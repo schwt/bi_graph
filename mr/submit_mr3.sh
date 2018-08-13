@@ -37,7 +37,7 @@ function main {
             -D mapred.job.name="${name}"  \
             -cacheFile "${FILTER}#${FILTER_NAME}"    \
             -mapper "python ${mapper} ${RHO} ${Tau} ${FILTER_NAME}" \
-            -reducer "python ${reducer} ${Length} ${If_norm}" \
+            -reducer "python ${reducer} ${Length} ${If_norm} ${confidence_rule}" \
             -file "${mapper}" \
             -file "${reducer}" \
             -input ${INPUT} \

@@ -17,6 +17,7 @@ days=2
 rho=0.5
 lambda=0.5
 tau=4320000
+confidence_rule=5
 length=100
 if_norm=1
 
