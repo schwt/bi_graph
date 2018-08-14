@@ -12,7 +12,7 @@ LAMBDA="${lambda}"
 
 echo "`datetime` start Job: ${name}"
 echo "`datetime` dates:"
-date_range ${days}
+date_range_filter ${days} ${black_dates}
 
 function main {
 
