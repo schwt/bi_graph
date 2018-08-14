@@ -27,9 +27,9 @@ function main {
 
     ${HADOOP} jar ${HADOOP_STREAM} \
             -D mapreduce.job.reduce.input.buffer.percent=0.3 \
-            -D mapreduce.job.maps=500 \
-            -D mapreduce.job.reduces=300 \
-            -D mapreduce.map.memory.mb=3072 \
+            -D mapreduce.job.maps=700 \
+            -D mapreduce.job.reduces=700 \
+            -D mapreduce.map.memory.mb=5120 \
             -D mapreduce.reduce.memory.mb=3072 \
             -D mapreduce.jobtracker.maxreducememory.mb=8192\
             -D mapreduce.map.java.opts="$javaOpt" \

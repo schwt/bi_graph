@@ -11,7 +11,9 @@ filter_recoIds=""                        # 如果结果需要过滤的，有效i
 output_file="./data/result.txt"
 
 ##### 使用数据天数
-days=2
+days=90
+##### 要过滤的日期
+black_dates="2018-06-17,2018-06-18"
 
 ##### train parameters
 rho=0.5
@@ -40,10 +42,14 @@ function timediff {
 function datetime {
     date +"[%Y-%m-%d %H:%M:%S]"
 }
-function date_range {
-    n=$1
-    for i in `seq 1 $n`; do
-        date -d "$i days ago" +"%Y-%m-%d"
+function date_range_filter {
+    days=$1
+    black_list=$2
+    for i in `seq 1 $days`; do
+        d=`date -d "$i days ago" +"%Y-%m-%d"`
+        if ! [[ $black_list =~ $d ]]; then
+            echo $d
+        fi  
     done
 }
 
@@ -51,7 +57,7 @@ function date_range {
 function path_list {
     path=$1
     days=$2
-    dates=(`date_range ${days}`)
+    dates=(`date_range_filter ${days} ${black_dates}`)
     echo -e "${path}${dates[0]} \c"
     new=(${dates[@]:1})
     for x in ${new[@]}; do
