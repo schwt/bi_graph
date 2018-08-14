@@ -2,10 +2,11 @@
 . `pwd`/config.sh
 
 dir=$(cd $(dirname $0); pwd)
+cd ${dir}
 name="${job_name}_job2"
 INPUT="${hdfs_tmp_dir}/output1"
 OUTPUT="${hdfs_tmp_dir}/output2"
-reducer="${dir}/reducer2.py"
+reducer="reducer2.py"
 RHO="${rho}"
 Tau="${tau}"
 

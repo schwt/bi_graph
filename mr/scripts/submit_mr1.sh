@@ -2,11 +2,12 @@
 . `pwd`/config.sh
 
 dir=$(cd $(dirname $0); pwd)
+cd $dir
 name="${job_name}_job1"
 INPUT=`path_list ${source_path} ${days}`
 OUTPUT="${hdfs_tmp_dir}/output1"
-mapper="${dir}/mapper1.py"
-reducer="${dir}/reducer1.py"
+mapper="mapper1.py"
+reducer="reducer1.py"
 LAMBDA="${lambda}"
 
 echo "`datetime` start Job: ${name}"
