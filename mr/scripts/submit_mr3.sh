@@ -1,5 +1,5 @@
 #!/bin/bash
-. ./config.sh
+. ../config.sh
 
 name="${job_name}_job3"
 INPUT="${hdfs_tmp_dir}/output2"

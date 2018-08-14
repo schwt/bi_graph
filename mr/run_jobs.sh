@@ -8,13 +8,13 @@ cd $dir0
 
 t0=`timestamp`
 datetime
-if ! ./submit_mr1.sh; then
+if ! ./scripts/submit_mr1.sh; then
     exit 1; fi
 
-if ! ./submit_mr2.sh; then
+if ! ./scripts/submit_mr2.sh; then
     exit 1; fi
 
-if ! ./submit_mr3.sh; then
+if ! ./scripts/submit_mr3.sh; then
     exit 1; fi
 
 tt=`timediff $t0`
