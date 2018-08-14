@@ -1,13 +1,14 @@
 #!/bin/bash
-. ../config.sh
+. `pwd`/config.sh
 
+dir=$(cd $(dirname $0); pwd)
 name="${job_name}_job3"
 INPUT="${hdfs_tmp_dir}/output2"
 OUTPUT="${hdfs_tmp_dir}/output3"
 FILTER="${hdfs_tmp_dir}/filter_recoIds.txt"
 FILTER_NAME="filterIds"
-mapper="mapper3.py"
-reducer="reducer3.py"
+mapper="${dir}/mapper3.py"
+reducer="${dir}/reducer3.py"
 
 RHO="${rho}"
 Tau="${tau}"
