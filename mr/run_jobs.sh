@@ -5,6 +5,7 @@ dir0=$(cd $(dirname $0); pwd)
 cd $dir0
 
 . ./config.sh
+. ./scripts/utils.sh
 
 t0=`timestamp`
 datetime

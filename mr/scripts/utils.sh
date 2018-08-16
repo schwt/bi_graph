@@ -43,6 +43,8 @@ function second2formated {
     s=$[seconds%60]
     echo "$h:$m:$s"
 }
+
+## test
 # date_range_filter ${days} ${black_dates}
-second2formated 3699
+# second2formated 3699
 
