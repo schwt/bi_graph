@@ -19,7 +19,7 @@ if ! ./scripts/submit_mr3.sh; then
     exit 1; fi
 
 tt=`timediff $t0`
-echo "total time: ${tt}s"
+echo "`datetime` total time: `second2formated ${tt}` (${tt}s)"
 
 mv ${output_file} ${output_file}.bak
 hadoop fs -getmerge ${hdfs_tmp_dir}/output3 ${output_file}
