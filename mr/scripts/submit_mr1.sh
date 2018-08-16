@@ -1,7 +1,8 @@
 #!/bin/bash
-. `pwd`/config.sh
-
 dir=$(cd $(dirname $0); pwd)
+. `pwd`/config.sh
+. ${dir}/utils.sh
+
 cd $dir
 name="${job_name}_job1"
 INPUT=`path_list ${source_path} ${days}`
@@ -21,10 +22,10 @@ function main {
     ${HADOOP} fs -rm -r ${OUTPUT}
 
     ${HADOOP} jar ${HADOOP_STREAM} \
-            -D mapreduce.job.maps=200 \
-            -D mapreduce.job.reduces=100 \
-            -D mapreduce.map.memory.mb=8192\
-            -D mapreduce.reduce.memory.mb=8192\
+            -D mapreduce.job.maps=${task_m1}        \
+            -D mapreduce.job.reduces=${task_r1}     \
+            -D mapreduce.map.memory.mb=${mem_m1}    \
+            -D mapreduce.reduce.memory.mb=${mem_r1} \
             -D mapreduce.jobtracker.maxreducememory.mb=8192 \
             -D mapreduce.map.java.opts="$javaOpt" \
             -D mapreduce.reduce.java.opts="$javaOpt" \
@@ -41,5 +42,5 @@ function main {
 t0=`timestamp`
 main
 tt=`timediff $t0`
-echo "`datetime` job1 time: ${tt}s"
+echo "`datetime` job1 time: `second2formated ${tt}` (${tt}s)"
 

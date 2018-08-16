@@ -29,39 +29,17 @@ idc_pid=1
 idc_rate=2
 idc_time=3
 
+task_m1=200
+task_r1=200
+task_m2=200
+task_r2=2000
+task_m3=700
+task_r3=300
 
-function timestamp {
-    date +%s 
-}
-function timediff {
-    old=$1
-    new=`timestamp`
-    dif=$[$new - $old]
-    echo $dif
-}
-function datetime {
-    date +"[%Y-%m-%d %H:%M:%S]"
-}
-function date_range_filter {
-    days=$1
-    black_list=$2
-    for i in `seq 1 $days`; do
-        d=`date -d "$i days ago" +"%Y-%m-%d"`
-        if ! [[ $black_list =~ $d ]]; then
-            echo $d
-        fi  
-    done
-}
-
-# 以 -input 连接的hdfs路径、日期
-function path_list {
-    path=$1
-    days=$2
-    dates=(`date_range_filter ${days} ${black_dates}`)
-    echo -e "${path}${dates[0]} \c"
-    new=(${dates[@]:1})
-    for x in ${new[@]}; do
-        echo -e "-input ${path}${x} \c"
-    done
-}
+mem_m1=8192
+mem_r1=8192
+mem_m2=8192
+mem_r2=8192
+mem_m3=5120
+mem_r3=3072
 
