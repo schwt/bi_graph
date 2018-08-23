@@ -9,8 +9,14 @@ from math import exp
 
 buff = []
 old_id = "aljsdkljg"
+userProdsMin = int(sys.argv[1])
+userProdsMax = int(sys.argv[2])
 
 def output_reduce(data):
+    if userProdsMin > 0 and len(data) <= userProdsMin:
+        return
+    if userProdsMax > 0 and len(data) >= userProdsMax:
+        return
     print ";".join("%s,%s,%s,%s" % x for x in data)
 
 

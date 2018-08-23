@@ -30,7 +30,7 @@ function main {
             -D mapreduce.map.java.opts="$javaOpt" \
             -D mapreduce.reduce.java.opts="$javaOpt" \
             -D mapreduce.job.name="${name}"  \
-            -mapper  "python ${mapper} ${idc_uid} ${idc_pid} ${idc_rate} ${idc_time}" \
+            -mapper  "python ${mapper} ${idc_uid} ${idc_pid} ${idc_rate} ${idc_time} ${rate_min} ${rate_max}" \
             -reducer "python ${reducer} ${LAMBDA}" \
             -file "${mapper}" \
             -file "${reducer}" \
@@ -43,4 +43,5 @@ t0=`timestamp`
 main
 tt=`timediff $t0`
 echo "`datetime` job1 time: `second2formated ${tt}` (${tt}s)"
+echo
 

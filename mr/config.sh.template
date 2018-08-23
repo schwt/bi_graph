@@ -22,6 +22,7 @@ tau=4320000
 confidence_rule=5
 length=100
 if_norm=1
+limitProds=10000
 
 ##### 输入数据字段对应
 idc_uid=0

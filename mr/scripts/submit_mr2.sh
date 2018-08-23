@@ -8,8 +8,7 @@ name="${job_name}_job2"
 INPUT="${hdfs_tmp_dir}/output1"
 OUTPUT="${hdfs_tmp_dir}/output2"
 reducer="reducer2.py"
-RHO="${rho}"
-Tau="${tau}"
+LimitProds="${limitProds}"
 
 echo "`datetime` start Job: ${name}"
 function main {
@@ -28,7 +27,7 @@ function main {
             -D mapreduce.reduce.java.opts="$javaOpt" \
             -D mapred.job.name="${name}"  \
             -mapper 'cat' \
-            -reducer "python ${reducer} ${RHO} ${Tau}" \
+            -reducer "python ${reducer} ${userProdsMin} ${userProdsMax}" \
             -file "${reducer}" \
             -input ${INPUT} \
             -output ${OUTPUT}
@@ -39,4 +38,5 @@ t0=`timestamp`
 main
 tt=`timediff $t0`
 echo "`datetime` job2 time: `second2formated ${tt}` (${tt}s)"
+echo
 

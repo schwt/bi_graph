@@ -76,4 +76,5 @@ t0=`timestamp`
 main
 tt=`timediff $t0`
 echo "`datetime` job3 time: `second2formated ${tt}` (${tt}s)"
+echo
 
