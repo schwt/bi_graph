@@ -2,7 +2,7 @@
 #include <cmath>
 #include "bi_graph.h"
 #include "utils.hpp"
-#include "../../clib/directory.hpp"
+#include "../clib/directory.hpp"
 
 // #define DEBUG
 

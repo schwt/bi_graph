@@ -24,14 +24,14 @@
 #include <sys/time.h>
 #include <sys/mman.h>
 
-#include "../../clib/Config.h"
-#include "../../clib/Timer.h"
-#include "../../clib/my_hash_map.h"
-#include "../../clib/WinnerTree_Linux.h" //外排
-#include "../../clib/ReadStructFile.h"   // 倒排索引
-#include "../../clib/MyGloble.h"
-#include "../../clib/Logger.h"
-#include "../../clib/uSTL.h"
+#include "../clib/Config.h"
+#include "../clib/Timer.h"
+#include "../clib/my_hash_map.h"
+#include "../clib/WinnerTree_Linux.h" //外排
+#include "../clib/ReadStructFile.h"   // 倒排索引
+#include "../clib/MyGloble.h"
+#include "../clib/Logger.h"
+#include "../clib/uSTL.h"
 
 using namespace std;
 
