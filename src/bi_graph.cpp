@@ -53,13 +53,10 @@ bool BiGraph::ReadConfigFile(string s_f_config)
     bool res = true;
     string snull = "";
 
-    if (!(res = ReadConfig.ReadInto("file", "temp_dir",      DIR_temp_))) return res;
+    if (!(res = ReadConfig.ReadInto("file", "data_dir",      DIR_data_))) return res;
     if (!(res = ReadConfig.ReadInto("file", "train_data",    F_train_data_))) return res;
     if (!(res = ReadConfig.ReadInto("file", "train_data_right", F_train_data_right_, snull))) return res;
     if (!(res = ReadConfig.ReadInto("file", "valid_reco_id", F_valid_reco_id_, snull))) return res;
-    if (!(res = ReadConfig.ReadInto("file", "sim_item_idx",  F_output_idx_))) return res;
-    if (!(res = ReadConfig.ReadInto("file", "sim_item_ivt",  F_output_ivt_))) return res;
-    if (!(res = ReadConfig.ReadInto("file", "sim_item_txt",  F_output_txt_))) return res;
     
     if (!(res = ReadConfig.ReadInto("switch", "delimiter",      delimiter_, 1))) return res;
     if (!(res = ReadConfig.ReadInto("switch", "calc_in_mem",    calc_in_mem_, 1))) return res;
@@ -67,9 +64,13 @@ bool BiGraph::ReadConfigFile(string s_f_config)
     if (!(res = ReadConfig.ReadInto("switch", "only_read_bin",  only_read_bin_, 0))) return res;
     if (!(res = ReadConfig.ReadInto("switch", "time_decay_type",time_decay_type_, 1))) return res;
 
-    if (!(res = ReadConfig.ReadInto("data", "score_threshold", score_threshold_, 0.0f))) return res;
+    if (!(res = ReadConfig.ReadInto("data", "idc_user", idc_user_, 0))) return res;
+    if (!(res = ReadConfig.ReadInto("data", "idc_item", idc_item_, 1))) return res;
+    if (!(res = ReadConfig.ReadInto("data", "idc_rate", idc_rate_, 2))) return res;
+    if (!(res = ReadConfig.ReadInto("data", "idc_time", idc_time_, 3))) return res;
     if (!(res = ReadConfig.ReadInto("data", "score_min", score_min_))) return res;
     if (!(res = ReadConfig.ReadInto("data", "score_max", score_max_))) return res;
+    if (!(res = ReadConfig.ReadInto("data", "score_threshold", score_threshold_, 0.0f))) return res;
     if (!(res = ReadConfig.ReadInto("data", "lambda", lambda_))) return res;
     if (!(res = ReadConfig.ReadInto("data", "rho",    rho_))) return res;
     if (!(res = ReadConfig.ReadInto("data", "tau",  tau_))) return res;
@@ -77,12 +78,16 @@ bool BiGraph::ReadConfigFile(string s_f_config)
     if (!(res = ReadConfig.ReadInto("data", "BUFFERCNT",    BUFFERCNT))) return res;
     if (!(res = ReadConfig.ReadInto("data", "SORTMEMSIZE",  SORTMEMSIZE))) return res;
     if (!(res = ReadConfig.ReadInto("data", "progress_num", progress_num_))) return res;
-    
+
+    F_output_idx_      = DIR_data_ + "/sim_item.idx";
+    F_output_ivt_      = DIR_data_ + "/sim_item.ivt";
+    F_output_txt_      = DIR_data_ + "/sim_item.txt";
+    F_matrix_ivt_user_ = DIR_data_ + "/matrix_user.ivt";
+    F_matrix_ivt_item_ = DIR_data_ + "/matrix_item.ivt";
+
     logger.log("paremeters");
     logger.log("\ttrain_data: "   + F_train_data_);
-    logger.log("\tsim_item_bin: " + F_output_ivt_);
-    logger.log("\tsim_item_txt: " + F_output_txt_);
-    logger.log("\tsim_item_txt: " + F_output_txt_);
+    logger.log("\tdata_dir: "     + DIR_data_);
     logger.log("\tscore_thresh: " + stringUtils::asString(score_threshold_));
     logger.log("\tlambda: "       + stringUtils::asString(lambda_));
     logger.log("\trho: "          + stringUtils::asString(rho_));
@@ -97,9 +102,6 @@ bool BiGraph::ReadConfigFile(string s_f_config)
 bool BiGraph::Calc()
 {
     bool res = true;
-
-    F_matrix_ivt_user_ = DIR_temp_ + "matrix_user.ivt";
-    F_matrix_ivt_item_ = DIR_temp_ + "matrix_item.ivt";
 
     // 只从旧二进制倒排索引数据转成文本
     if (only_read_bin_) {
@@ -142,14 +144,13 @@ bool BiGraph::SourceDataManage()
     bool res = true;
     
     
-    string f_temp              = DIR_temp_ + "data.dat";
-    string f_temp_right        = DIR_temp_ + "data_right.dat";
-    string f_temp_sorted       = DIR_temp_ + "data.sorted.dat";
-    string f_temp_right_sorted = DIR_temp_ + "data_right.sorted.dat";
+    string f_temp              = DIR_data_ + "/data.dat";
+    string f_temp_right        = DIR_data_ + "/data_right.dat";
+    string f_temp_sorted       = DIR_data_ + "/data.sorted.dat";
+    string f_temp_right_sorted = DIR_data_ + "/data_right.sorted.dat";
 
     is_double_behavior_ = (F_train_data_right_ != "");
 
-    // return res;
     res = LoadData(f_temp, f_temp_right);
     if (!res) {
         logger.log(__LINE__, res, "Loaddata");
@@ -198,7 +199,6 @@ bool BiGraph::SourceDataManage()
     return res;
 }
 
-// input text: "uid itemID score timestamp"
 // output bin: DataNode
 bool BiGraph::LoadData(string dst, string dst_right) {
     logger.log("-------------LoadData-------------");
@@ -278,12 +278,11 @@ bool BiGraph::LoadData_(string src, string dst, vector<int>& vec_item_id, bool i
         while (getline (fin, line)) {
             cnt1++;
             stringUtils::split(line, s_delimiter, sep_vec);
-            if (sep_vec.size() != 4) continue;
-            if (atof(sep_vec[2].c_str() ) <= 0.0) continue;
-            string user   = sep_vec[0];
-            int item      = atoi(sep_vec[1].c_str());
-            float score   = atof(sep_vec[2].c_str());
-            int timestamp = atoi(sep_vec[3].c_str());
+            if (sep_vec.size() < 4) continue;
+            string user   = sep_vec[idc_user_];
+            int item      = atoi(sep_vec[idc_item_].c_str());
+            float score   = atof(sep_vec[idc_rate_].c_str());
+            int timestamp = atoi(sep_vec[idc_time_].c_str());
             if (score < score_min_ || score > score_max_) continue;
 
             mapped_uid = ustl.get(hm_user_map_, user, (int)hm_user_map_.size());
@@ -677,7 +676,6 @@ bool BiGraph::TrainInMem() {
         vec_item_right_norm_[i] = pow(vec_item_right_norm_[i], lambda_);
     }
     for (size_t pid = 0; pid < num_item_left_; pid ++) {
-        // printIdx("==", pid, vec_matrix_idx_item_[pid]);
         int from_u = vec_matrix_idx_item_[pid].offset / sizeof(MatrixInvert);
         int to_u   = vec_matrix_idx_item_[pid].count + from_u;
         int buff_cnt = 0;

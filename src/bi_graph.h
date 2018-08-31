@@ -17,11 +17,11 @@ private:
     uSTL ustl;
 
     //////////////////////////// new ///////////////////////////////
-    string DIR_temp_;
     // files
     string F_train_data_;
     string F_train_data_right_;
     string F_valid_reco_id_;
+    string DIR_data_;
     string F_output_idx_;
     string F_output_ivt_;
     string F_output_txt_;
@@ -53,6 +53,12 @@ private:
     float tau_;
     int progress_num_;
     float score_threshold_;
+
+    // 指定输入数据所在字段
+    int idc_user_;
+    int idc_item_;
+    int idc_time_;
+    int idc_rate_;
 
     // 读数据过滤的行为分数范围: score_min_ <= x <= score_max_
     int score_min_;
