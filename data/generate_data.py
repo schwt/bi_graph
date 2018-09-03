@@ -6,30 +6,28 @@
  #Date:        2017-09-13 13:57:31
  #
 import sys
-import random as rd
+from random import randint
 
-output = "train.txt"
-data_num = 1000000
-max_uid  = 100000
-max_pid  = 10000
-max_score = 5
-time_from = 1483200000
-time_to   = 1505282614
+"""
+生成demo数据，仅供速度测试
+"""
 
-def main():
-    num = data_num
-    wf = open(output, 'w')
-    if len(sys.argv) > 1:
-        num = int(sys.argv[1])
-        print "generate num:", num
-    else:
-        print "use default num:", num
-    if num > 1000000:
-        print "it may use several minutes..."
-    for x in xrange(num):
-        wf.write("%d\t%d\t%d\t%s\n" % (rd.randint(1, max_uid), rd.randint(1, max_pid), rd.randint(1, max_score), rd.randint(time_from, time_to) ))
-    wf.close()
-    print "done."
+f_output = sys.argv[1]
+num_sample = int(sys.argv[2])
+num_user   = int(sys.argv[3])
+num_item   = int(sys.argv[4])
 
-if __name__ == '__main__':
-    main()
+wf = open(f_output, 'w')
+for x in xrange(num_sample):
+    uid = randint(0, num_user)
+    iid = randint(0, num_item)
+    time = randint(0, 3600 * 24 * 10) + 1500000000  # 10days range
+    rate = randint(0, 5)
+    wf.write("%s\t%s\t%s\t%s\n" % (uid, iid, rate, time))
+    if x % 10000 == 0:
+        print "\t" + str(x) + "\r",
+        sys.stdout.flush()
+
+print
+wf.close()
+

@@ -579,9 +579,9 @@ bool BiGraph::Train() {
 
     vector<SimIndex> vec_output_idx(num_item_left_);
     vector<SimInvert> vec_ivt_score;
-    vector<float> vec_buff_score(num_item_right_);
-    vector<int> vec_buff_id(num_item_right_);
-    int buff_cnt = 0;
+    vector<float> vec_collector_score(num_item_right_);
+    vector<int> vec_collector_id(num_item_right_);
+    int collector_id = 0;
     int from = 0;
 
     for (size_t i = 0; i < vec_item_right_norm_.size(); i++) {
@@ -596,24 +596,24 @@ bool BiGraph::Train() {
             for (iivt_item = vec_ivt_item.begin(); iivt_item != vec_ivt_item.end(); iivt_item++) {
                 size_t item_id = iivt_item->id;
                 if (vec_item_id_right_[item_id] == vec_item_id_left_[pid]) continue;
-                if (vec_buff_score[item_id] == 0) 
-                    vec_buff_id[buff_cnt++] = item_id;
-                vec_buff_score[item_id] += get_score(iivt_user, iivt_item);
+                if (vec_collector_score[item_id] == 0)
+                    vec_collector_id[collector_id++] = item_id;
+                vec_collector_score[item_id] += get_score(iivt_user, iivt_item);
             }
         }
-        if (buff_cnt == 0)
+        if (collector_id== 0)
             continue;
         float sum = 0.0;
-        vec_ivt_score.resize(buff_cnt);
-        for (int i = 0; i < buff_cnt; i++) {
-            int id = vec_buff_id[i];
+        vec_ivt_score.resize(collector_id);
+        for (int i = 0; i < collector_id; i++) {
+            int id = vec_collector_id[i];
             vec_ivt_score[i].id    = vec_item_id_right_[id];
-            vec_ivt_score[i].score = vec_buff_score[id] / vec_item_right_norm_[id];
+            vec_ivt_score[i].score = vec_collector_score[id] / vec_item_right_norm_[id];
             sum += vec_ivt_score[i].score;
-            vec_buff_id[i] = 0;
-            vec_buff_score[id] = 0;
+            vec_collector_id[i] = 0;
+            vec_collector_score[id] = 0;
         }
-        buff_cnt = 0;
+        collector_id = 0;
         int limit_len =  Min(top_reserve_, (int)vec_ivt_score.size());
         partial_sort(vec_ivt_score.begin(), vec_ivt_score.begin() + limit_len, vec_ivt_score.end() );
 
@@ -664,9 +664,9 @@ bool BiGraph::TrainInMem() {
 
     SimIndex index_node;
     vector<SimIndex> vec_output_idx;
-    vector<SimInvert> vec_ivt_score;
-    vector<float> vec_buff_score(num_item_right_);
-    vector<int> vec_buff_id(num_item_right_);
+    vector<SimInvert> vec_ivt_score(num_item_right_);
+    vector<int>   vec_collector_id(num_item_right_);
+    vector<float> vec_collector_score(num_item_right_, -1);
     int from = 0;
 
     CTimer timer;
@@ -678,7 +678,7 @@ bool BiGraph::TrainInMem() {
     for (size_t pid = 0; pid < num_item_left_; pid ++) {
         int from_u = vec_matrix_idx_item_[pid].offset / sizeof(MatrixInvert);
         int to_u   = vec_matrix_idx_item_[pid].count + from_u;
-        int buff_cnt = 0;
+        int collector_id = 0;
         for (iivt_user = vec_ivt_user.begin() + from_u; iivt_user < vec_ivt_user.begin() + to_u; iivt_user++) {
 
             int user_id = iivt_user->id;
@@ -690,27 +690,25 @@ bool BiGraph::TrainInMem() {
                 size_t item_id = iivt_item->id;
                 if (vec_item_id_right_[item_id] == vec_item_id_left_[pid]) continue;
 
-                if (vec_buff_score[item_id] == 0) 
-                    vec_buff_id[buff_cnt++] = item_id;
-                vec_buff_score[item_id] += get_score(iivt_user, iivt_item);
+                if (vec_collector_score[item_id] == -1) {
+                    vec_collector_id[collector_id++] = item_id;
+                    vec_collector_score[item_id] = 0;
+                }
+                vec_collector_score[item_id] += get_score(iivt_user, iivt_item);
             }
         }
-        if (buff_cnt == 0)
+        if (collector_id == 0)
             continue;
         float sum = 0.0;
-        vec_ivt_score.resize(buff_cnt);
-        for (int i = 0; i < buff_cnt; i++) {
-            int id      = vec_buff_id[i];
-            float score = vec_buff_score[id] / vec_item_right_norm_[id];
-            vec_ivt_score[i].id    = vec_item_id_right_[id];
-            vec_ivt_score[i].score = score;
+        for (int i = 0; i < collector_id; i++) {
+            int id = vec_collector_id[i];
+            vec_ivt_score[i].id = vec_item_id_right_[id];
+            vec_ivt_score[i].score = vec_collector_score[id] / vec_item_right_norm_[id];
             sum += vec_ivt_score[i].score;
-            vec_buff_id[i] = 0;
-            vec_buff_score[id] = 0;
+            vec_collector_score[id] = -1;
         }
-        buff_cnt = 0;
-        int len =  Min(top_reserve_, (int)vec_ivt_score.size());
-        partial_sort(vec_ivt_score.begin(), vec_ivt_score.begin() + len, vec_ivt_score.end() );
+        int len =  Min(top_reserve_, collector_id);
+        partial_sort(vec_ivt_score.begin(), vec_ivt_score.begin() + len, vec_ivt_score.begin() + collector_id);
         if (if_norm_result_ == 1) {
             double max = vec_ivt_score[0].score != 0? vec_ivt_score[0].score: 1;
             for (int i = 0; i < len; i++) {
