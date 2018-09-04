@@ -36,12 +36,13 @@
 using namespace std;
 
 typedef unsigned int UINT;
+typedef unsigned short SHORT;
 
 struct DataNode {
     int user_id;
     int item_id;
-    int timestamp;
-    float score;
+    SHORT timestamp;   // 转换距5年前的小时数：[x - t(5年前)] / 3600 
+    SHORT score;
 };
 
 struct MatrixIndex {
@@ -52,7 +53,7 @@ struct MatrixIndex {
 };
 struct MatrixInvert {
     int id;
-    int timestamp;
+    SHORT timestamp;
     float score;
 };
 

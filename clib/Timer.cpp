@@ -15,7 +15,7 @@ long CTimer::UsedSeconds() {
     return m_tDiffTime;
 }
 
-void CTimer::OutPutTimeSpan() {
+string CTimer::OutPutTimeSpan() {
     if(m_tEndTime < m_tBeginTime)
         printf("Error!\n");
     long timespan = m_tDiffTime;
@@ -23,7 +23,10 @@ void CTimer::OutPutTimeSpan() {
     timespan %= 3600;
     long minutes = timespan / 60;
     long seconds = timespan % 60;
-    printf("used time: %ld:%02ld:%02ld\n",hours,minutes,seconds);
+    char ret[20] = {0};
+    snprintf(ret, sizeof(ret), "%ld:%02ld:%02ld\n",hours,minutes,seconds);
+    // printf("used time: %ld:%02ld:%02ld\n",hours,minutes,seconds);
+    return (string)ret;
 }
 
 string CTimer::GetCurrentTime() {

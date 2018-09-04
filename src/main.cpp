@@ -20,7 +20,8 @@ int main(int argc, char* argv[])
     b_rt = obj_bi_graph.Calc();
     if (!b_rt) return -1;
     timer.EndTiming();
-    timer.OutPutTimeSpan();
+    // timer.OutPutTimeSpan();
+    obj_bi_graph.logger.log("used time: " + timer.OutPutTimeSpan());
 
     return 0;
 }

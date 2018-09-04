@@ -270,6 +270,10 @@ bool BiGraph::LoadData_(string src, string dst, vector<int>& vec_item_id, bool i
         return false;
     }
 
+    time_t now;
+    time(&now);
+    int time_begin = now - 5*365*24*3600; // 5 years ago
+
     vector<string> vec_files = filesOfPath(src);
     sort(vec_files.begin(), vec_files.end());
     for (size_t i = 0; i < vec_files.size(); i++) {
@@ -281,7 +285,7 @@ bool BiGraph::LoadData_(string src, string dst, vector<int>& vec_item_id, bool i
             if (sep_vec.size() < 4) continue;
             string user   = sep_vec[idc_user_];
             int item      = atoi(sep_vec[idc_item_].c_str());
-            float score   = atof(sep_vec[idc_rate_].c_str());
+            int score     = atoi(sep_vec[idc_rate_].c_str());
             int timestamp = atoi(sep_vec[idc_time_].c_str());
             if (score < score_min_ || score > score_max_) continue;
 
@@ -305,7 +309,7 @@ bool BiGraph::LoadData_(string src, string dst, vector<int>& vec_item_id, bool i
             buff[idc].user_id   = mapped_uid;
             buff[idc].item_id   = mapped_pid;
             buff[idc].score     = score;
-            buff[idc].timestamp = timestamp;
+            buff[idc].timestamp = (timestamp - time_begin) / 3600;
             cnt2++;
 
             if (++idc >= BUFFERCNT) {

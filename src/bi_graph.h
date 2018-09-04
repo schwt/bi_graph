@@ -9,11 +9,11 @@ public:
 public:
     bool Init(const char* cstr_config_file);
     bool Calc();
+    Logger logger;
 
 private:
     bool ReadConfigFile(string file_config);
 private:
-    Logger logger;
     uSTL ustl;
 
     //////////////////////////// new ///////////////////////////////

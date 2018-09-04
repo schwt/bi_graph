@@ -13,7 +13,7 @@ public:
     void StartTiming();             // 开始时间打点
     void EndTiming();               // 结束时间打点
     long UsedSeconds();             // 返回耗时，秒数
-    void OutPutTimeSpan();          // 打印耗时（"小时数:分:秒")
+    string OutPutTimeSpan();          // 打印耗时（"小时数:分:秒")
     string GetCurrentTime();        // 获取当前时间, 格式化
     static double GetTimeSpan(const char* cstrTimeEnd,const char* cstrTimeBegin); //unit: second
 private:
