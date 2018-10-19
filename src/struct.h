@@ -41,8 +41,8 @@ typedef unsigned short SHORT;
 struct DataNode {
     int user_id;
     int item_id;
-    SHORT timestamp;   // 转换距5年前的小时数：[x - t(5年前)] / 3600 
-    SHORT score;
+    int timestamp;
+    int score;
 };
 
 struct MatrixIndex {
@@ -53,7 +53,7 @@ struct MatrixIndex {
 };
 struct MatrixInvert {
     int id;
-    SHORT timestamp;
+    int timestamp;
     float score;
 };
 

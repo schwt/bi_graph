@@ -53,10 +53,11 @@ bool BiGraph::ReadConfigFile(string s_f_config)
     bool res = true;
     string snull = "";
 
-    if (!(res = ReadConfig.ReadInto("file", "data_dir",      DIR_data_))) return res;
-    if (!(res = ReadConfig.ReadInto("file", "train_data",    F_train_data_))) return res;
+    if (!(res = ReadConfig.ReadInto("file", "data_dir",         DIR_data_))) return res;
+    if (!(res = ReadConfig.ReadInto("file", "train_data",       F_train_data_))) return res;
     if (!(res = ReadConfig.ReadInto("file", "train_data_right", F_train_data_right_, snull))) return res;
-    if (!(res = ReadConfig.ReadInto("file", "valid_reco_id", F_valid_reco_id_, snull))) return res;
+    if (!(res = ReadConfig.ReadInto("file", "valid_reco_id",    F_valid_reco_id_, snull))) return res;
+    if (!(res = ReadConfig.ReadInto("file", "invalid_reco_id",  F_invalid_reco_id_, snull))) return res;
     
     if (!(res = ReadConfig.ReadInto("switch", "delimiter",      delimiter_, 1))) return res;
     if (!(res = ReadConfig.ReadInto("switch", "calc_in_mem",    calc_in_mem_, 1))) return res;
@@ -77,8 +78,8 @@ bool BiGraph::ReadConfigFile(string s_f_config)
     if (!(res = ReadConfig.ReadInto("data", "top_reserve",  top_reserve_))) return res;
     if (!(res = ReadConfig.ReadInto("data", "BUFFERCNT",    BUFFERCNT))) return res;
     if (!(res = ReadConfig.ReadInto("data", "SORTMEMSIZE",  SORTMEMSIZE))) return res;
-    if (!(res = ReadConfig.ReadInto("data", "progress_num", progress_num_))) return res;
 
+    tau_ *= 3600;  // 小时转秒
     F_output_idx_      = DIR_data_ + "/sim_item.idx";
     F_output_ivt_      = DIR_data_ + "/sim_item.ivt";
     F_output_txt_      = DIR_data_ + "/sim_item.txt";
@@ -235,6 +236,15 @@ bool BiGraph::LoadData(string dst, string dst_right) {
         }
     }
 
+    // 加载不可推荐结果集
+    if (F_invalid_reco_id_ != "") {
+        res = LoadIds(F_invalid_reco_id_, vec_item_id_right_, set_invalid_reco_id_);
+        if (!res) {
+            logger.log(__LINE__, res, "LoadIds");
+            return res;
+        }
+    }
+
 
     num_item_left_  = vec_item_id_left_.size();
     num_item_right_ = vec_item_id_right_.size();
@@ -272,7 +282,7 @@ bool BiGraph::LoadData_(string src, string dst, vector<int>& vec_item_id, bool i
 
     time_t now;
     time(&now);
-    int time_begin = now - 5*365*24*3600; // 5 years ago
+    // int time_begin = now - 5*365*24*3600; // 5 years ago
 
     vector<string> vec_files = filesOfPath(src);
     sort(vec_files.begin(), vec_files.end());
@@ -309,7 +319,7 @@ bool BiGraph::LoadData_(string src, string dst, vector<int>& vec_item_id, bool i
             buff[idc].user_id   = mapped_uid;
             buff[idc].item_id   = mapped_pid;
             buff[idc].score     = score;
-            buff[idc].timestamp = (timestamp - time_begin) / 3600;
+            buff[idc].timestamp = timestamp;
             cnt2++;
 
             if (++idc >= BUFFERCNT) {
@@ -385,7 +395,8 @@ bool BiGraph::MakeMatrixU2P(string f_src) {
     }
     int from   = 0;
     float norm = 0.0;
-    bool if_filter = set_valid_reco_id_.size() > 0;
+    bool if_filter   = set_valid_reco_id_.size() > 0;
+    bool if_infilter = set_invalid_reco_id_.size() > 0;
     DataNode     node;
     MatrixIndex   strt_index;
     MatrixInvert  strt_invert;
@@ -413,6 +424,8 @@ bool BiGraph::MakeMatrixU2P(string f_src) {
 
         for (int i = 0; i < size; ++i) {
             if (if_filter && !ustl.contain(set_valid_reco_id_, readbuf[i].item_id))
+                continue;
+            if (if_infilter && ustl.contain(set_invalid_reco_id_, readbuf[i].item_id))
                 continue;
             if (uid_old != readbuf[i].user_id) {
                 strt_index.norm   = norm;
@@ -585,6 +598,7 @@ bool BiGraph::Train() {
     vector<SimInvert> vec_ivt_score;
     vector<float> vec_collector_score(num_item_right_);
     vector<int> vec_collector_id(num_item_right_);
+    int progress_num = Max(num_item_left_/10000, 1);
     int collector_id = 0;
     int from = 0;
 
@@ -627,7 +641,7 @@ bool BiGraph::Train() {
         vec_output_idx[pid].offset = (long long)from * sizeof(SimInvert);
         fwrite(&vec_ivt_score[0], sizeof(SimInvert), limit_len, fp_output_ivt);
         from += vec_output_idx[pid].count;
-        if  (pid % progress_num_ == 0)  {
+        if  (pid % progress_num == 0)  {
             printf("progress: %.2f%% (%ld)\r", 100.0 * pid / num_item_left_, pid);
             fflush(stdout);
         }
@@ -675,6 +689,8 @@ bool BiGraph::TrainInMem() {
 
     CTimer timer;
     timer.StartTiming();
+
+    int progress_num = Max(num_item_left_/10000, 1);
 
     for (size_t i = 0; i < vec_item_right_norm_.size(); i++) {
         vec_item_right_norm_[i] = pow(vec_item_right_norm_[i], lambda_);
@@ -727,7 +743,7 @@ bool BiGraph::TrainInMem() {
         vec_output_idx.push_back(index_node);
         fwrite(&vec_ivt_score[0], sizeof(SimInvert), len, fp_output_ivt);
         from += len;
-        if (pid % progress_num_ == 0) {
+        if (pid % progress_num == 0) {
             printf("progress: %.2f%% (%ld)\r", 100.0 * pid / num_item_left_, pid);
             fflush(stdout);
         }

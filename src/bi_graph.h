@@ -21,6 +21,7 @@ private:
     string F_train_data_;
     string F_train_data_right_;
     string F_valid_reco_id_;
+    string F_invalid_reco_id_;
     string DIR_data_;
     string F_output_idx_;
     string F_output_ivt_;
@@ -30,6 +31,7 @@ private:
     string F_matrix_ivt_item_;
 
     set<int> set_valid_reco_id_;
+    set<int> set_invalid_reco_id_;
     hash_map<string, int> hm_user_map_;
     vector<int> vec_item_id_left_;
     vector<int> vec_item_id_right_;
@@ -51,7 +53,6 @@ private:
     float lambda_;
     float rho_;
     float tau_;
-    int progress_num_;
     float score_threshold_;
 
     // 指定输入数据所在字段
