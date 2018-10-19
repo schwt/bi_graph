@@ -71,5 +71,62 @@ struct SimInvert {
     }
 };
 
+struct ThreadArgs {
+    int thread_id;
+    int num_thread;
+    int time_decay_type;
+    int top_reserve;
+    int if_norm_result;
+    size_t num_item_right;
+    float lambda;
+    float rho;
+    float tau;
+    float score_threshold;
+    vector<int>* vec_item_id_left;
+    vector<int>* vec_item_id_right;
+    vector<double>* item_right_norm;
+    vector<MatrixIndex>* i2u_idx;
+    vector<MatrixIndex>* u2i_idx;
+    vector<MatrixInvert>* i2u_ivt;
+    vector<MatrixInvert>* u2i_ivt;
+    hash_map<int, vector<SimInvert> >* th_result;
+
+    ThreadArgs(int _num_thread,
+            int _time_decay_type,
+            int _top_reserve,
+            int _num_item_right,
+            int _if_norm_result;
+            double _lambda,
+            double _rho,
+            double _tau,
+            double _score_threshold,
+            vector<int>* _vec_item_id_left,
+            vector<int>* _vec_item_id_right,
+            vector<double>* _item_right_norm,
+            vector<MatrixIndex>*  _i2u_idx,
+            vector<MatrixIndex>*  _u2i_idx,
+            vector<MatrixInvert>* _i2u_ivt,
+            vector<MatrixInvert>* _u2i_ivt) {
+        thread_id = 0;
+        num_thread = _num_thread;
+        time_decay_type = _time_decay_type;
+        top_reserve = _top_reserve;
+        num_item_right = _num_item_right;
+        if_norm_result = _if_norm_result;
+        lambda = _lambda;
+        rho = _rho;
+        tau = _tau;
+        score_threshold = _score_threshold;
+        vec_item_id_left  = _vec_item_id_left;
+        vec_item_id_right = _vec_item_id_right;
+        item_right_norm = _item_right_norm;
+        i2u_idx = _i2u_idx;
+        u2i_idx = _u2i_idx;
+        i2u_ivt = _i2u_ivt;
+        u2i_ivt = _u2i_ivt;
+        th_result = NULL;
+    }
+};
+
 #endif
 
