@@ -95,7 +95,7 @@ struct ThreadArgs {
             int _time_decay_type,
             int _top_reserve,
             int _num_item_right,
-            int _if_norm_result;
+            int _if_norm_result,
             double _lambda,
             double _rho,
             double _tau,

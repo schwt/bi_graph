@@ -339,8 +339,10 @@ bool BiGraph::LoadData_(string src, string dst, vector<int>& vec_item_id, bool i
         vec_item_id[itp->second] = itp->first;
     }
 
-    for (size_t i = 0; i < vec_item_right_norm_.size(); i++) {
-        vec_item_right_norm_[i] = pow(vec_item_right_norm_[i], lambda_);
+    if (if_stat_item_norm) {
+        for (size_t i = 0; i < vec_item_right_norm_.size(); i++) {
+            vec_item_right_norm_[i] = pow(vec_item_right_norm_[i], lambda_);
+        }
     }
 
     logger.log("# user count: " + stringUtils::asString(hm_user_map_.size()));
@@ -606,9 +608,6 @@ bool BiGraph::Train() {
     int collector_id = 0;
     int from = 0;
 
-    for (size_t i = 0; i < vec_item_right_norm_.size(); i++) {
-        vec_item_right_norm_[i] = pow(vec_item_right_norm_[i], lambda_);
-    }
     for (size_t pid = 0; pid < num_item_left_; pid ++) {
         if (vec_matrix_idx_item_[pid].count == 0) continue;
         ReadInvert(fp_ivt_user, vec_matrix_idx_item_[pid], vec_ivt_user);
@@ -696,9 +695,6 @@ bool BiGraph::TrainInMem() {
 
     int progress_num = Max(num_item_left_/10000, 1);
 
-    for (size_t i = 0; i < vec_item_right_norm_.size(); i++) {
-        vec_item_right_norm_[i] = pow(vec_item_right_norm_[i], lambda_);
-    }
     for (size_t pid = 0; pid < num_item_left_; pid ++) {
         int from_u = vec_matrix_idx_item_[pid].offset / sizeof(MatrixInvert);
         int to_u   = vec_matrix_idx_item_[pid].count + from_u;
