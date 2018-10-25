@@ -93,5 +93,10 @@ private:
     float half_decay(int);
     void normalize(T_v_ivt&, float);
     double get_score(T_v_ivt::iterator, T_v_ivt::iterator);
+
+
+    bool CleanUserActions();
+    bool TrainMultiThreads();
+    bool CombineThreadResults(vector<vector<pair<int, vector<SimInvert> > > >&);
 };
 

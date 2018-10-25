@@ -1,5 +1,4 @@
-// #include "bi_graph.h"
-#include "mt_graph.h"
+#include "bi_graph.h"
 
 int main(int argc, char* argv[])
 {

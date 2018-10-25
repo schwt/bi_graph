@@ -23,6 +23,7 @@
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/mman.h>
+#include <pthread.h>
 
 #include "../clib/Config.h"
 #include "../clib/Timer.h"
@@ -73,13 +74,11 @@ struct SimInvert {
 
 struct ThreadArgs {
     int thread_id;
-    int num_thread;
+    int num_threads;
     int time_decay_type;
     int top_reserve;
     int if_norm_result;
     size_t num_item_right;
-    float lambda;
-    float rho;
     float tau;
     float score_threshold;
     vector<int>* vec_item_id_left;
@@ -89,15 +88,13 @@ struct ThreadArgs {
     vector<MatrixIndex>* u2i_idx;
     vector<MatrixInvert>* i2u_ivt;
     vector<MatrixInvert>* u2i_ivt;
-    hash_map<int, vector<SimInvert> >* th_result;
+    vector<pair<int, vector<SimInvert> > >* th_result;
 
-    ThreadArgs(int _num_thread,
+    ThreadArgs(int _num_threads,
             int _time_decay_type,
             int _top_reserve,
-            int _num_item_right,
             int _if_norm_result,
-            double _lambda,
-            double _rho,
+            int _num_item_right,
             double _tau,
             double _score_threshold,
             vector<int>* _vec_item_id_left,
@@ -108,13 +105,11 @@ struct ThreadArgs {
             vector<MatrixInvert>* _i2u_ivt,
             vector<MatrixInvert>* _u2i_ivt) {
         thread_id = 0;
-        num_thread = _num_thread;
+        num_threads = _num_threads;
         time_decay_type = _time_decay_type;
         top_reserve = _top_reserve;
-        num_item_right = _num_item_right;
         if_norm_result = _if_norm_result;
-        lambda = _lambda;
-        rho = _rho;
+        num_item_right = _num_item_right;
         tau = _tau;
         score_threshold = _score_threshold;
         vec_item_id_left  = _vec_item_id_left;

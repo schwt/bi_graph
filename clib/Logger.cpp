@@ -22,19 +22,17 @@ bool Logger::SetLogFile(string file, string name)
 {
     m_log_file = file;
     m_pro_name = name;
-	char cBuffer[1024]={0};
-	
-	time_t t_Time;
-	struct tm *tm_time;
-	t_Time=time(NULL);
-	tm_time=localtime(&t_Time);		
+    char cBuffer[1024]={0};
+
+    char time_s[64] = {0};
+    time_t timep;
+    time (&timep);
+    strftime(time_s, sizeof(time_s), "%Y-%m-%d %H:%M:%S",localtime(&timep) );
 
 	FILE *fpLog;
 	if((fpLog=fopen(m_log_file.c_str(),"at"))==NULL)
 	{	
-		sprintf(cBuffer,"%02d-%02d-%02d_%02d:%02d:%02d [ ERROR ] [Msg:Open Log.txt File] [Line:%d]\n",
-		        tm_time->tm_year+1900, tm_time->tm_mon+1, tm_time->tm_mday, 
-				tm_time->tm_hour, tm_time->tm_min, tm_time->tm_sec, __LINE__);
+		sprintf(cBuffer,"%s [ ERROR ] [Msg:Open Log.txt File] [Line:%d]\n", time_s, __LINE__);
 				
 		printf("%s", cBuffer);
 		fprintf(fpLog, "%s", cBuffer);
@@ -82,27 +80,22 @@ bool Logger::iwrite(string nLine, string bReturn, string sMessages)
 {
 	char cBuffer[1024]={0};
 	
-	time_t t_Time;
-	struct tm *tm_time;
-	t_Time=time(NULL);
-	tm_time=localtime(&t_Time);	
+    char time_s[64] = {0};
+    time_t timep;
+    time (&timep);
+    strftime(time_s, sizeof(time_s), "%Y-%m-%d %H:%M:%S",localtime(&timep) );
 
 	FILE *fpLog;
 	if((fpLog=fopen(m_log_file.c_str(),"at"))==NULL)
 	{	
-		sprintf(cBuffer, "[%02d-%02d-%02d %02d:%02d:%02d][ERROR]%s  Open Log.txt File\n", 
-		        tm_time->tm_year+1900, tm_time->tm_mon+1, tm_time->tm_mday, 
-				tm_time->tm_hour, tm_time->tm_min, tm_time->tm_sec, nLine.c_str());
+		sprintf(cBuffer, "[%s][ERROR]%s  Open Log.txt File\n", time_s, nLine.c_str());
 				
 		printf("%s", cBuffer);
 		fprintf(fpLog, "%s", cBuffer);
 		return false;
 	}
 
-    sprintf(cBuffer,"[%02d-%02d-%02d %02d:%02d:%02d]%s%s %s\n", 
-            tm_time->tm_year+1900, tm_time->tm_mon+1, tm_time->tm_mday, 
-    		tm_time->tm_hour, tm_time->tm_min, tm_time->tm_sec, 
-    		bReturn.c_str(), nLine.c_str(), sMessages.c_str());
+    sprintf(cBuffer,"[%s]%s%s %s\n", time_s, bReturn.c_str(), nLine.c_str(), sMessages.c_str());
     		
     printf("%s", cBuffer);
     fprintf(fpLog, "%s", cBuffer);
