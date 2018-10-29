@@ -11,7 +11,6 @@ int main(int argc, char* argv[])
     }
 
     CTimer timer;
-    timer.StartTiming();
 
     BiGraph obj_bi_graph;
 
@@ -20,9 +19,7 @@ int main(int argc, char* argv[])
     
     b_rt = obj_bi_graph.Calc();
     if (!b_rt) return -1;
-    timer.EndTiming();
-    // timer.OutPutTimeSpan();
-    obj_bi_graph.logger.log("used time: " + timer.OutPutTimeSpan());
+    obj_bi_graph.logger.log("used time: " + timer.OutputTimeSpan());
 
     return 0;
 }

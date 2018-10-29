@@ -2,6 +2,10 @@
 #include <stdio.h>
 #include <memory.h>
 
+CTimer::CTimer() {
+    StartTiming();
+}
+
 void CTimer::StartTiming() {
     time(&m_tBeginTime);
 }
@@ -15,7 +19,8 @@ long CTimer::UsedSeconds() {
     return m_tDiffTime;
 }
 
-string CTimer::OutPutTimeSpan() {
+string CTimer::OutputTimeSpan() {
+    EndTiming();
     if(m_tEndTime < m_tBeginTime)
         printf("Error!\n");
     long timespan = m_tDiffTime;
@@ -24,7 +29,7 @@ string CTimer::OutPutTimeSpan() {
     long minutes = timespan / 60;
     long seconds = timespan % 60;
     char ret[20] = {0};
-    snprintf(ret, sizeof(ret), "%ld:%02ld:%02ld\n",hours,minutes,seconds);
+    snprintf(ret, sizeof(ret), "%ld:%02ld:%02ld  (%lds)\n",hours,minutes,seconds, timespan);
     // printf("used time: %ld:%02ld:%02ld\n",hours,minutes,seconds);
     return (string)ret;
 }

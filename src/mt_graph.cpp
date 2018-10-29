@@ -702,7 +702,6 @@ bool BiGraph::TrainInMem() {
     int from = 0;
 
     CTimer timer;
-    timer.StartTiming();
 
     int progress_num = Max(num_item_left_/10000, 1);
 
@@ -908,7 +907,6 @@ bool BiGraph::TrainMultiThreads() {
 
     // 等待各线程完成
     CTimer timer;
-    timer.StartTiming();
     void * thread_ret[num_threads_];
     for (int id_thread = 0; id_thread < num_threads_; id_thread++) {
         pthread_join(tid[id_thread], &thread_ret[id_thread]);
@@ -922,8 +920,7 @@ bool BiGraph::TrainMultiThreads() {
         }
     }
     printf("%s Threads (%d) all done.\n", getNow(1).c_str(), num_threads_);
-    timer.EndTiming();
-    logger.log("train time: " + stringUtils::asString(timer.UsedSeconds()) + "s\n");
+    logger.log("train time: " + timer.OutputTimeSpan());
 
     // 合并输出结果
     bool ret = CombineThreadResults(vec_threads_result);
