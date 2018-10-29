@@ -54,6 +54,7 @@ private:
     float rho_;
     float tau_;
     float score_threshold_;
+    int num_threads_;
 
     // 指定输入数据所在字段
     int idc_user_;
@@ -87,10 +88,11 @@ private:
     bool TrainInMem();
     bool OutputTxt();
     bool OutputTxtFormat();
-    float decay(int);
-    float guassian(int);
-    float half_decay(int);
     void normalize(T_v_ivt&, float);
-    double get_score(T_v_ivt::iterator, T_v_ivt::iterator);
+
+
+    bool CleanUserActions();
+    bool TrainMultiThreads();
+    bool CombineThreadResults(vector<vector<pair<int, vector<SimInvert> > > >&);
 };
 

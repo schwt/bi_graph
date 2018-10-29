@@ -65,6 +65,7 @@ bool BiGraph::ReadConfigFile(string s_f_config)
     if (!(res = ReadConfig.ReadInto("switch", "only_read_bin",  only_read_bin_, 0))) return res;
     if (!(res = ReadConfig.ReadInto("switch", "time_decay_type",time_decay_type_, 1))) return res;
 
+    if (!(res = ReadConfig.ReadInto("data", "num_threads", num_threads_, 0))) return res;
     if (!(res = ReadConfig.ReadInto("data", "idc_user", idc_user_, 0))) return res;
     if (!(res = ReadConfig.ReadInto("data", "idc_item", idc_item_, 1))) return res;
     if (!(res = ReadConfig.ReadInto("data", "idc_rate", idc_rate_, 2))) return res;
@@ -89,6 +90,7 @@ bool BiGraph::ReadConfigFile(string s_f_config)
     logger.log("paremeters");
     logger.log("\ttrain_data: "   + F_train_data_);
     logger.log("\tdata_dir: "     + DIR_data_);
+    logger.log("\tnum threads : " + stringUtils::asString(num_threads_));
     logger.log("\tscore_thresh: " + stringUtils::asString(score_threshold_));
     logger.log("\tlambda: "       + stringUtils::asString(lambda_));
     logger.log("\trho: "          + stringUtils::asString(rho_));
@@ -119,22 +121,31 @@ bool BiGraph::Calc()
         return res;
     }
 
-    if (calc_in_mem_ == 0)
+    if (calc_in_mem_ == 0) {
         res = Train();
-    else
-        res = TrainInMem();
+    } else {
+        if (num_threads_ == 0) {
+            res = TrainInMem();
+        } else {
+            res = TrainMultiThreads();
+        }
+    }
     if (!res) {
         logger.log(__LINE__, res, "Train");
         return res;
     }
 
-    res = OutputTxt();
-    if (!res) {
-        logger.log(__LINE__, res, "OutputTxt");
-        return res;
+    if (calc_in_mem_ == 0 || (calc_in_mem_ == 1 && num_threads_ == 0)) {
+        res = OutputTxt();
+        if (!res) {
+            logger.log(__LINE__, res, "OutputTxt");
+            return res;
+        }
     }
 
     cout << endl;
+    RemoveFile(F_matrix_ivt_item_);
+    RemoveFile(F_matrix_ivt_user_);
     return res;
 }
 
@@ -193,10 +204,15 @@ bool BiGraph::SourceDataManage()
         return res;
     }
 
-    cout << endl;
-    // RemoveFile(f_temp);
-    // RemoveFile(f_temp_sorted);
+    res = CleanUserActions();
+    if (!res) {
+        logger.log(__LINE__, res, "CleanUserActions");
+        return res;
+    }
 
+    cout << endl;
+    RemoveFile(f_temp);
+    RemoveFile(f_temp_sorted);
     return res;
 }
 
@@ -280,8 +296,8 @@ bool BiGraph::LoadData_(string src, string dst, vector<int>& vec_item_id, bool i
         return false;
     }
 
-    time_t now;
-    time(&now);
+    // time_t now;
+    // time(&now);
     // int time_begin = now - 5*365*24*3600; // 5 years ago
 
     vector<string> vec_files = filesOfPath(src);
@@ -434,6 +450,7 @@ bool BiGraph::MakeMatrixU2P(string f_src) {
             if (if_infilter && ustl.contain(set_invalid_reco_id_, readbuf[i].item_id))
                 continue;
             if (uid_old != readbuf[i].user_id) {
+                strt_index.id     = uid_old;
                 strt_index.norm   = norm;
                 strt_index.count  = (int)vec_invert_buf.size();
                 strt_index.offset = (long long)from * sizeof(MatrixInvert);
@@ -457,6 +474,7 @@ bool BiGraph::MakeMatrixU2P(string f_src) {
         memset(readbuf, 0, BUFFERCNT);
     }
     if (vec_invert_buf.size() > 0) {
+        strt_index.id     = uid_old;
         strt_index.norm   = norm;
         strt_index.count  = (int)vec_invert_buf.size();
         strt_index.offset = (long long)from * sizeof(MatrixInvert);
@@ -573,9 +591,22 @@ void printIvt(string s, MatrixInvert node) {
 #endif
 }
 
-double BiGraph::get_score(T_v_ivt::iterator node1, T_v_ivt::iterator node2) {
-    return node1->score * node2->score * decay(node1->timestamp - node2->timestamp);
+float _half_decay(int x, int tau) {
+    return exp2(-1.0 * abs(x) /  tau) * 0.9 + 0.1;
 }
+float _guassian(int x, int tau) {
+    // return exp(-1.0 * x * x / 2.0 / tau/tau) * 0.9 + 0.1;
+    return exp(-1.0 * x * x / 2.0 / tau/tau);
+}
+float _decay(int x, int time_decay_type, int tau) {
+    if (time_decay_type == 1) return _half_decay(x, tau);
+    if (time_decay_type == 2) return _guassian(x, tau);
+    return _half_decay(x, tau);
+}
+double _get_score(vector<MatrixInvert>::iterator node1, vector<MatrixInvert>::iterator node2, int time_decay_type, int tau) {
+    return node1->score * node2->score * _decay(node1->timestamp - node2->timestamp, time_decay_type, tau);
+}
+
 
 bool BiGraph::Train() {
     logger.log("-------------Train-------------");
@@ -619,7 +650,7 @@ bool BiGraph::Train() {
                 if (vec_item_id_right_[item_id] == vec_item_id_left_[pid]) continue;
                 if (vec_collector_score[item_id] == 0)
                     vec_collector_id[collector_id++] = item_id;
-                vec_collector_score[item_id] += get_score(iivt_user, iivt_item);
+                vec_collector_score[item_id] += _get_score(iivt_user, iivt_item, time_decay_type_, tau_);
             }
         }
         if (collector_id== 0)
@@ -691,7 +722,6 @@ bool BiGraph::TrainInMem() {
     int from = 0;
 
     CTimer timer;
-    timer.StartTiming();
 
     int progress_num = Max(num_item_left_/10000, 1);
 
@@ -714,7 +744,7 @@ bool BiGraph::TrainInMem() {
                     vec_collector_id[collector_id++] = item_id;
                     vec_collector_score[item_id] = 0;
                 }
-                vec_collector_score[item_id] += get_score(iivt_user, iivt_item);
+                vec_collector_score[item_id] += _get_score(iivt_user, iivt_item, time_decay_type_, tau_);
             }
         }
         if (collector_id == 0)
@@ -772,17 +802,271 @@ bool BiGraph::TrainInMem() {
     return res;
 }
 
-float BiGraph::decay(int x) {
-    if (time_decay_type_ == 1) return half_decay(x);
-    if (time_decay_type_ == 2) return guassian(x);
-    return half_decay(x);
+void updateHead(vector<SimInvert> buff, SimInvert node) {
 }
-float BiGraph::half_decay(int x) {
-    return exp2(-1.0 * abs(x) /  tau_) * 0.9 + 0.1;
+
+// 清理user->item 倒排，去掉用户行为数topN的数据
+bool BiGraph::CleanUserActions() {
+    logger.log("------------- CleanUserActions -------------");
+    int limit = 5;
+    SimInvert node;
+    vector<SimInvert> buff(limit, node);
+
+    make_heap(buff.begin(), buff.end());
+    int cnt_diff = 0;
+
+    for (size_t i = 0; i != vec_matrix_idx_user_.size(); i++) {
+        node.id    = vec_matrix_idx_user_[i].id;
+        node.score = vec_matrix_idx_user_[i].count;
+        if (node.id != (int)i) {
+            // printf("ERROR: %ld, %d\n", i, node.id);
+            cnt_diff++;
+        }
+        buff.push_back(node);
+        push_heap(buff.begin(), buff.end());
+        pop_heap(buff.begin(), buff.end());
+        buff.pop_back();
+    }
+
+    sort(buff.begin(), buff.end());
+    for (size_t i = 0; i < buff.size(); i++) {
+        printf("  [%ld] %d: \t%.0f\n", i, buff[i].id, buff[i].score);
+        vec_matrix_idx_user_[buff[i].id].count = 0;
+    }
+    printf("#users: %ld\n", vec_matrix_idx_user_.size());
+    printf("#diffs: %d\n", cnt_diff);
+    return true;
 }
-float BiGraph::guassian(int x) {
-    // return exp(-1.0 * x * x / 2.0 / tau_/tau_) * 0.9 + 0.1;
-    return exp(-1.0 * x * x / 2.0 / tau_/tau_);
+
+// float BiGraph::decay(int x) {
+//     if (time_decay_type_ == 1) return half_decay(x);
+//     if (time_decay_type_ == 2) return guassian(x);
+//     return half_decay(x);
+// }
+// float BiGraph::half_decay(int x) {
+//     return exp2(-1.0 * abs(x) /  tau_) * 0.9 + 0.1;
+// }
+// float BiGraph::guassian(int x) {
+//     // return exp(-1.0 * x * x / 2.0 / tau_/tau_) * 0.9 + 0.1;
+//     return exp(-1.0 * x * x / 2.0 / tau_/tau_);
+// }
+
+string getNow(int type) {
+    time_t timep;
+    time (&timep);
+    char tmp[64];
+    if (type == 0) {
+        strftime(tmp, sizeof(tmp), "[%Y-%m-%d %H:%M:%S]", localtime(&timep) );
+    } else if (type == 1) {
+        strftime(tmp, sizeof(tmp), "[%H:%M:%S]", localtime(&timep) );
+    }
+    string ret = "";
+    ret += tmp;
+    return ret;
+}
+
+// 统计索引中的倒排数分布topN情况
+void statIndex(vector<MatrixIndex>& src) {
+    vector<SimInvert> vec(src.size());
+    size_t sum = 0;
+    size_t sum_sqr = 0;
+
+    for (size_t i = 0; i < src.size(); i++) {
+        vec[i].id = src[i].id;
+        vec[i].score = src[i].count * 1.0;
+        sum += src[i].count;
+        sum_sqr += src[i].count * src[i].count;
+    }
+    float mean  = sum / src.size();
+    float stder = pow(sum_sqr / src.size() - mean * mean, 0.5);
+    printf("mean : %f\n", mean);
+    printf("stder: %f\n", stder);
+    sort(vec.begin(), vec.end());
+    for (int i = 0; i < 20; i++) {
+        printf("[%2d]uid: %d\tcnt: %f\n", i, vec[i].id, vec[i].score);
+    }
+}
+
+bool BiGraph::TrainMultiThreads() {
+    logger.log("-------------TrainMultiThreads-------------");
+
+    // statIndex(vec_matrix_idx_user_);
+    
+    void *_trainEachThread(void *args);
+
+    // 线程结果池
+    vector<vector<pair<int, vector<SimInvert> > > > vec_threads_result;
+    vec_threads_result.resize(num_threads_);
+
+    // 倒排数据载入内存
+    vector<MatrixInvert> vec_matrix_ivt_item;
+    vector<MatrixInvert> vec_matrix_ivt_user;
+    LoadIndex_Vector(F_matrix_ivt_user_, vec_matrix_ivt_user);
+    LoadIndex_Vector(F_matrix_ivt_item_, vec_matrix_ivt_item);
+
+    // 配置线程参数
+    struct ThreadArgs thArgs(num_threads_, time_decay_type_, top_reserve_, if_norm_result_, num_item_right_, tau_, score_threshold_, 
+            &vec_item_id_left_, &vec_item_id_right_, &vec_item_right_norm_, &vec_matrix_idx_item_, 
+            &vec_matrix_idx_user_, &vec_matrix_ivt_user, &vec_matrix_ivt_item);
+    vector<ThreadArgs> vec_args(num_threads_, thArgs);
+    for (int id_thread = 0; id_thread < num_threads_; id_thread++) {
+        vec_args[id_thread].thread_id = id_thread;
+        vec_args[id_thread].th_result = &vec_threads_result[id_thread];
+    }
+
+    // 创建线程
+    pthread_t tid[num_threads_];
+    for (int id_thread = 0; id_thread < num_threads_; id_thread++) {
+        bool res = !pthread_create(&tid[id_thread], NULL, _trainEachThread, (void*)&vec_args[id_thread]);
+        if (!res) {
+            printf("%s Create threads failed!\n", getNow(1).c_str());
+            return res;
+        }
+        else printf("%s Create threads: tid[%d]=%ld\n", getNow(1).c_str(), id_thread, (long)tid[id_thread]);
+    }
+
+    // 等待各线程完成
+    CTimer timer;
+    void * thread_ret[num_threads_];
+    for (int id_thread = 0; id_thread < num_threads_; id_thread++) {
+        pthread_join(tid[id_thread], &thread_ret[id_thread]);
+    }
+
+    // 检查各线程返回值
+    for (int id_thread = 0; id_thread < num_threads_; id_thread++) {
+        if (!(bool)thread_ret[id_thread]) {
+            printf("%s Thread [%2d] %d return false, exit!\n", getNow(1).c_str(), id_thread, (int)tid[id_thread]);
+            return false;
+        }
+    }
+    printf("%s Threads (%d) all done.\n", getNow(1).c_str(), num_threads_);
+    logger.log("train time: " + timer.OutputTimeSpan());
+
+    // 合并输出结果
+    bool ret = CombineThreadResults(vec_threads_result);
+    if (!ret) {
+        logger.log(__LINE__, false, "ERROR combine thread results!");
+        return false;
+    }
+    return true;
+}
+
+inline bool checkThreadId(int pid, int num_threads, int id_thread) {
+    return myHash(pid) % num_threads == (size_t)id_thread; 
+    // return pid % num_threads == id_thread; 
+}
+
+void *_trainEachThread(void *args) {
+
+    struct ThreadArgs *thArgs = (ThreadArgs *)args;
+    printf("%s begin thread: %d\n", getNow(1).c_str(), thArgs->thread_id);
+
+    vector<int>* vec_item_id_left  = thArgs->vec_item_id_left;
+    vector<int>* vec_item_id_right = thArgs->vec_item_id_right;
+    vector<double>* item_right_norm = thArgs->item_right_norm;
+    vector<MatrixIndex>* vec_matrix_idx_item = thArgs->i2u_idx;
+    vector<MatrixIndex>* vec_matrix_idx_user = thArgs->u2i_idx;
+    vector<MatrixInvert>* vec_ivt_user = thArgs->i2u_ivt;
+    vector<MatrixInvert>* vec_ivt_item = thArgs->u2i_ivt;
+    vector<pair<int, vector<SimInvert> > >* th_result = thArgs->th_result;
+
+    vector<float> vec_collector_score(thArgs->num_item_right, -1);
+    vector<int>   vec_collector_id(thArgs->num_item_right);
+
+    int progress_num = Max(vec_matrix_idx_item->size()/10000, 1);
+    int item_cnt = 0;
+    size_t sum_reco_item = 0;
+    size_t sum_reco_user = 0;
+    time_t t_begin;
+    time(&t_begin);
+
+    for (size_t pid = 0; pid < vec_matrix_idx_item->size(); pid ++) {
+        if (!checkThreadId(pid, thArgs->num_threads, thArgs->thread_id)) continue;
+        int from_u = (*vec_matrix_idx_item)[pid].offset / sizeof(MatrixInvert);
+        int to_u   = (*vec_matrix_idx_item)[pid].count + from_u;
+        int collector_id = 0;
+        for (vector<MatrixInvert>::iterator iivt_user = vec_ivt_user->begin() + from_u; iivt_user < vec_ivt_user->begin() + to_u; iivt_user++) {
+
+            int user_id = iivt_user->id;
+
+            int from_i = (*vec_matrix_idx_user)[user_id].offset / sizeof(MatrixInvert);
+            int to_i   = (*vec_matrix_idx_user)[user_id].count + from_i;
+            sum_reco_user++;
+            for (vector<MatrixInvert>::iterator iivt_item = vec_ivt_item->begin() + from_i; iivt_item < vec_ivt_item->begin() + to_i; iivt_item++) {
+
+                size_t item_id = iivt_item->id;
+                if ((*vec_item_id_right)[item_id] == (*vec_item_id_left)[pid]) continue;
+
+                if (vec_collector_score[item_id] == -1) {
+                    vec_collector_score[item_id] = 0;
+                    vec_collector_id[collector_id++] = item_id;
+                }
+                vec_collector_score[item_id] += _get_score(iivt_user, iivt_item, thArgs->time_decay_type, thArgs->tau);
+                sum_reco_item++;
+            }
+        }
+        if (collector_id == 0)
+            continue;
+        vector<SimInvert> vec_ivt_score(collector_id);
+        for (int i = 0; i < collector_id; i++) {
+            int id = vec_collector_id[i];
+            vec_ivt_score[i].id = (*vec_item_id_right)[id];
+            vec_ivt_score[i].score = vec_collector_score[id] / (*item_right_norm)[id];
+            vec_collector_score[id] = -1;
+        }
+        int len =  Min(thArgs->top_reserve, collector_id);
+        partial_sort(vec_ivt_score.begin(), vec_ivt_score.begin() + len, vec_ivt_score.begin() + collector_id);
+        if (len < collector_id) {
+            vec_ivt_score.erase(vec_ivt_score.begin() + len, vec_ivt_score.end());
+        }
+        if (thArgs->if_norm_result == 1) {
+            double max = vec_ivt_score[0].score != 0? vec_ivt_score[0].score: 1;
+            for (int i = 0; i < len; i++) {
+                vec_ivt_score[i].score /= max;
+            }
+        }
+
+        (*th_result).push_back(make_pair((*vec_item_id_left)[pid], vec_ivt_score));
+        if  (pid % progress_num == 0)  {
+            printf("\t--thread[%2d] process: %.2f%% (%ld)\r", thArgs->thread_id, 100.0*pid/vec_matrix_idx_item->size(), pid);
+            fflush(stdout);
+        }
+        item_cnt++;
+    }
+    time_t t_end;
+    time(&t_end);
+
+    printf("%s Thread [%2d] done. (time: %ld, item: %d, muser: %ld, mitem: %ld)\n", getNow(1).c_str(), thArgs->thread_id, t_end-t_begin, 
+            item_cnt, sum_reco_user/item_cnt, sum_reco_item/item_cnt);
+    pthread_exit((void *)true);
+}
+
+bool BiGraph::CombineThreadResults(vector<vector<pair<int, vector<SimInvert> > > >& vec_src) {
+    logger.log("------------- CombineThreadResults -------------");
+    FILE *fp = fopen(F_output_txt_.c_str(), "w");
+    if (!fp) {
+        logger.log(__LINE__, false, "ERROR open files:"+F_output_txt_);
+        return false;
+    }
+    for (size_t i = 0; i < vec_src.size(); i++) {
+        for (vector<pair<int, vector<SimInvert> > >::iterator iter = vec_src[i].begin(); iter != vec_src[i].end(); iter++) {
+            if (iter->second.size() == 0) continue;
+            stringstream stream;
+            stream << iter->first;
+            stream << "\t";
+            for (vector<SimInvert>::iterator node = iter->second.begin(); node  < iter->second.end(); node++) {
+                stream << node->id;
+                stream << ":";
+                stream << node->score;
+                if (node != iter->second.end() -1) {
+                    stream << ",";
+                }
+            }
+            fprintf(fp, "%s\n", stream.str().c_str());
+        }
+    }
+    fclose(fp);
+    return true;
 }
 
 bool BiGraph::OutputTxt() {

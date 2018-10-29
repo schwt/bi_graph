@@ -35,12 +35,12 @@ inline bool RemoveFile(const string& fpath)
 	if (remove(fpath.c_str()) < 0)//
 	{
 		res = false;
-		cout << "[ERROR] remove file: "<< fpath << " line=" << endl;
+		cout << "[ERROR] remove file: "<< fpath << endl;
 	}
 	else
 	{
 		res = true;
-		cout << "[OK] remove file: " << fpath<<" line=" << endl;
+		cout << "[OK] remove file: " << fpath << endl;
 	}	
 	return res;
 }
