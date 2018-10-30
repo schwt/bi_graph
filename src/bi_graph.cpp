@@ -59,7 +59,7 @@ bool BiGraph::ReadConfigFile(string s_f_config)
     if (!(res = ReadConfig.ReadInto("file", "valid_reco_id",    F_valid_reco_id_, snull))) return res;
     if (!(res = ReadConfig.ReadInto("file", "invalid_reco_id",  F_invalid_reco_id_, snull))) return res;
     
-    if (!(res = ReadConfig.ReadInto("input", "delimiter",      delimiter_, 0))) return res;
+    if (!(res = ReadConfig.ReadInto("input", "delimiter", delimiter_, 0))) return res;
     if (!(res = ReadConfig.ReadInto("input", "score_min", score_min_))) return res;
     if (!(res = ReadConfig.ReadInto("input", "score_max", score_max_))) return res;
     if (!(res = ReadConfig.ReadInto("input", "idc_user", idc_user_, 0))) return res;
@@ -298,10 +298,6 @@ bool BiGraph::LoadData_(string src, string dst, vector<int>& vec_item_id, bool i
         return false;
     }
 
-    // time_t now;
-    // time(&now);
-    // int time_begin = now - 5*365*24*3600; // 5 years ago
-
     vector<string> vec_files = filesOfPath(src);
     sort(vec_files.begin(), vec_files.end());
     for (size_t i = 0; i < vec_files.size(); i++) {
@@ -345,7 +341,6 @@ bool BiGraph::LoadData_(string src, string dst, vector<int>& vec_item_id, bool i
                 idc = 0;
             }
         }
-        // fin.close();
     }
     if (idc > 0) {
         fwrite(&buff[0], sizeof(DataNode), idc, fp_dst);
@@ -876,6 +871,20 @@ void statIndex(vector<MatrixIndex>& src) {
     }
 }
 
+// 显示进度
+void printThreadProgression(vector<float>* vec_progression, int num_threads) {
+    stringstream stream;
+    stream << " thread(" << num_threads << "): [";
+    for (int id_thread = 0; id_thread < num_threads; id_thread++) {
+        char buff[1024] = {0};
+        snprintf(buff, sizeof(buff), "  %5.2f", (*vec_progression)[id_thread]);
+        stream << buff;
+    }
+    stream << "]";
+    printf("%s\r", stream.str().c_str());
+    fflush(stdout);
+}
+
 bool BiGraph::TrainMultiThreads() {
     logger.log("-------------TrainMultiThreads-------------");
 
@@ -884,8 +893,9 @@ bool BiGraph::TrainMultiThreads() {
     void *_trainEachThread(void *args);
 
     // 线程结果池
-    vector<vector<pair<int, vector<SimInvert> > > > vec_threads_result;
-    vec_threads_result.resize(num_threads_);
+    vector<vector<pair<int, vector<SimInvert> > > > vec_threads_result(num_threads_);
+    // 进度显示池
+    vector<float> vec_progression(num_threads_, 0.0);
 
     // 倒排数据载入内存
     vector<MatrixInvert> vec_matrix_ivt_item;
@@ -896,7 +906,7 @@ bool BiGraph::TrainMultiThreads() {
     // 配置线程参数
     struct ThreadArgs thArgs(num_threads_, time_decay_type_, top_reserve_, if_norm_result_, num_item_right_, tau_, score_threshold_, 
             &vec_item_id_left_, &vec_item_id_right_, &vec_item_right_norm_, &vec_matrix_idx_item_, 
-            &vec_matrix_idx_user_, &vec_matrix_ivt_user, &vec_matrix_ivt_item);
+            &vec_matrix_idx_user_, &vec_matrix_ivt_user, &vec_matrix_ivt_item, &vec_progression);
     vector<ThreadArgs> vec_args(num_threads_, thArgs);
     for (int id_thread = 0; id_thread < num_threads_; id_thread++) {
         vec_args[id_thread].thread_id = id_thread;
@@ -958,6 +968,7 @@ void *_trainEachThread(void *args) {
     vector<MatrixInvert>* vec_ivt_user = thArgs->i2u_ivt;
     vector<MatrixInvert>* vec_ivt_item = thArgs->u2i_ivt;
     vector<pair<int, vector<SimInvert> > >* th_result = thArgs->th_result;
+    vector<float>* vec_progression = thArgs->vec_progression;
 
     vector<float> vec_collector_score(thArgs->num_item_right, -1);
     vector<int>   vec_collector_id(thArgs->num_item_right);
@@ -1017,15 +1028,15 @@ void *_trainEachThread(void *args) {
 
         (*th_result).push_back(make_pair((*vec_item_id_left)[pid], vec_ivt_score));
         if  (pid % progress_num == 0)  {
-            printf("\t--thread[%2d] process: %.2f%% (%ld)\r", thArgs->thread_id, 100.0*pid/vec_matrix_idx_item->size(), pid);
-            fflush(stdout);
+            (*vec_progression)[thArgs->thread_id] = 100.0*pid/vec_matrix_idx_item->size();
+            printThreadProgression(vec_progression, thArgs->num_threads);
         }
         item_cnt++;
     }
     time_t t_end;
     time(&t_end);
 
-    printf("%s Thread [%2d] done. (time: %ld, item: %d, muser: %ld, mitem: %ld)\n", getNow(1).c_str(), thArgs->thread_id, t_end-t_begin, 
+    printf("%s Thread [%2d] done. (time: %ld, item: %d, muser: %ld, mitem: %ld)    \n", getNow(1).c_str(), thArgs->thread_id, t_end-t_begin, 
             item_cnt, sum_reco_user/item_cnt, sum_reco_item/item_cnt);
     pthread_exit((void *)true);
 }

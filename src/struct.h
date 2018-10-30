@@ -89,6 +89,7 @@ struct ThreadArgs {
     vector<MatrixInvert>* i2u_ivt;
     vector<MatrixInvert>* u2i_ivt;
     vector<pair<int, vector<SimInvert> > >* th_result;
+    vector<float>* vec_progression;
 
     ThreadArgs(int _num_threads,
             int _time_decay_type,
@@ -103,7 +104,8 @@ struct ThreadArgs {
             vector<MatrixIndex>*  _i2u_idx,
             vector<MatrixIndex>*  _u2i_idx,
             vector<MatrixInvert>* _i2u_ivt,
-            vector<MatrixInvert>* _u2i_ivt) {
+            vector<MatrixInvert>* _u2i_ivt,
+            vector<float>* _vec_progression) {
         thread_id = 0;
         num_threads = _num_threads;
         time_decay_type = _time_decay_type;
@@ -119,6 +121,7 @@ struct ThreadArgs {
         u2i_idx = _u2i_idx;
         i2u_ivt = _i2u_ivt;
         u2i_ivt = _u2i_ivt;
+        vec_progression = _vec_progression;
         th_result = NULL;
     }
 };
