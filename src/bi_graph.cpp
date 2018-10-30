@@ -59,24 +59,26 @@ bool BiGraph::ReadConfigFile(string s_f_config)
     if (!(res = ReadConfig.ReadInto("file", "valid_reco_id",    F_valid_reco_id_, snull))) return res;
     if (!(res = ReadConfig.ReadInto("file", "invalid_reco_id",  F_invalid_reco_id_, snull))) return res;
     
-    if (!(res = ReadConfig.ReadInto("switch", "delimiter",      delimiter_, 1))) return res;
-    if (!(res = ReadConfig.ReadInto("switch", "calc_in_mem",    calc_in_mem_, 1))) return res;
-    if (!(res = ReadConfig.ReadInto("switch", "if_norm_result", if_norm_result_, 1))) return res;
-    if (!(res = ReadConfig.ReadInto("switch", "only_read_bin",  only_read_bin_, 0))) return res;
-    if (!(res = ReadConfig.ReadInto("switch", "time_decay_type",time_decay_type_, 1))) return res;
+    if (!(res = ReadConfig.ReadInto("input", "delimiter",      delimiter_, 0))) return res;
+    if (!(res = ReadConfig.ReadInto("input", "score_min", score_min_))) return res;
+    if (!(res = ReadConfig.ReadInto("input", "score_max", score_max_))) return res;
+    if (!(res = ReadConfig.ReadInto("input", "idc_user", idc_user_, 0))) return res;
+    if (!(res = ReadConfig.ReadInto("input", "idc_item", idc_item_, 1))) return res;
+    if (!(res = ReadConfig.ReadInto("input", "idc_rate", idc_rate_, 2))) return res;
+    if (!(res = ReadConfig.ReadInto("input", "idc_time", idc_time_, 3))) return res;
 
-    if (!(res = ReadConfig.ReadInto("data", "num_threads", num_threads_, 0))) return res;
-    if (!(res = ReadConfig.ReadInto("data", "idc_user", idc_user_, 0))) return res;
-    if (!(res = ReadConfig.ReadInto("data", "idc_item", idc_item_, 1))) return res;
-    if (!(res = ReadConfig.ReadInto("data", "idc_rate", idc_rate_, 2))) return res;
-    if (!(res = ReadConfig.ReadInto("data", "idc_time", idc_time_, 3))) return res;
-    if (!(res = ReadConfig.ReadInto("data", "score_min", score_min_))) return res;
-    if (!(res = ReadConfig.ReadInto("data", "score_max", score_max_))) return res;
-    if (!(res = ReadConfig.ReadInto("data", "score_threshold", score_threshold_, 0.0f))) return res;
-    if (!(res = ReadConfig.ReadInto("data", "lambda", lambda_))) return res;
-    if (!(res = ReadConfig.ReadInto("data", "rho",    rho_))) return res;
-    if (!(res = ReadConfig.ReadInto("data", "tau",  tau_))) return res;
-    if (!(res = ReadConfig.ReadInto("data", "top_reserve",  top_reserve_))) return res;
+    if (!(res = ReadConfig.ReadInto("parameter", "num_threads", num_threads_, 0))) return res;
+    if (!(res = ReadConfig.ReadInto("parameter", "top_reserve",  top_reserve_))) return res;
+    if (!(res = ReadConfig.ReadInto("parameter", "score_threshold", score_threshold_, 0.0f))) return res;
+    if (!(res = ReadConfig.ReadInto("parameter", "lambda", lambda_))) return res;
+    if (!(res = ReadConfig.ReadInto("parameter", "rho",    rho_))) return res;
+    if (!(res = ReadConfig.ReadInto("parameter", "tau",  tau_))) return res;
+    if (!(res = ReadConfig.ReadInto("parameter", "time_decay_type", time_decay_type_, 0))) return res;
+
+    if (!(res = ReadConfig.ReadInto("switch", "if_norm_result", if_norm_result_, 1))) return res;
+    if (!(res = ReadConfig.ReadInto("switch", "calc_in_mem",    calc_in_mem_, 1))) return res;
+    if (!(res = ReadConfig.ReadInto("switch", "only_read_bin",  only_read_bin_, 0))) return res;
+
     if (!(res = ReadConfig.ReadInto("data", "BUFFERCNT",    BUFFERCNT))) return res;
     if (!(res = ReadConfig.ReadInto("data", "SORTMEMSIZE",  SORTMEMSIZE))) return res;
 
@@ -121,13 +123,13 @@ bool BiGraph::Calc()
         return res;
     }
 
-    if (calc_in_mem_ == 0) {
-        res = Train();
+    if (num_threads_ > 0) {
+        res = TrainMultiThreads();
     } else {
-        if (num_threads_ == 0) {
+        if (calc_in_mem_ == 1) {
             res = TrainInMem();
         } else {
-            res = TrainMultiThreads();
+            res = Train();
         }
     }
     if (!res) {
@@ -135,7 +137,7 @@ bool BiGraph::Calc()
         return res;
     }
 
-    if (calc_in_mem_ == 0 || (calc_in_mem_ == 1 && num_threads_ == 0)) {
+    if (num_threads_ == 0) {
         res = OutputTxt();
         if (!res) {
             logger.log(__LINE__, res, "OutputTxt");
@@ -288,9 +290,9 @@ bool BiGraph::LoadData_(string src, string dst, vector<int>& vec_item_id, bool i
     hash_map<int, int> hm_item_map;
     hash_map<int, int>::iterator itp;
     string s_delimiter;
-    if (delimiter_ == 1) s_delimiter = ",";
+    if (delimiter_ == 0) s_delimiter = "\t";
+    else if (delimiter_ == 1) s_delimiter = ",";
     else if (delimiter_ == 2) s_delimiter = " ";
-    else if (delimiter_ == 3) s_delimiter = "\t";
     else {
         logger.log(__LINE__, false, "error delimiter setting: " + stringUtils::asString(delimiter_));
         return false;
@@ -599,8 +601,8 @@ float _guassian(int x, int tau) {
     return exp(-1.0 * x * x / 2.0 / tau/tau);
 }
 float _decay(int x, int time_decay_type, int tau) {
-    if (time_decay_type == 1) return _half_decay(x, tau);
-    if (time_decay_type == 2) return _guassian(x, tau);
+    if (time_decay_type == 0) return _half_decay(x, tau);
+    if (time_decay_type == 1) return _guassian(x, tau);
     return _half_decay(x, tau);
 }
 double _get_score(vector<MatrixInvert>::iterator node1, vector<MatrixInvert>::iterator node2, int time_decay_type, int tau) {
@@ -837,19 +839,6 @@ bool BiGraph::CleanUserActions() {
     printf("#diffs: %d\n", cnt_diff);
     return true;
 }
-
-// float BiGraph::decay(int x) {
-//     if (time_decay_type_ == 1) return half_decay(x);
-//     if (time_decay_type_ == 2) return guassian(x);
-//     return half_decay(x);
-// }
-// float BiGraph::half_decay(int x) {
-//     return exp2(-1.0 * abs(x) /  tau_) * 0.9 + 0.1;
-// }
-// float BiGraph::guassian(int x) {
-//     // return exp(-1.0 * x * x / 2.0 / tau_/tau_) * 0.9 + 0.1;
-//     return exp(-1.0 * x * x / 2.0 / tau_/tau_);
-// }
 
 string getNow(int type) {
     time_t timep;
