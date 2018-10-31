@@ -11,7 +11,8 @@ where time decay factor has two configurable types: half-life decay, and Guassia
 
 $$
 T_1(t, \tau) = 2^{-t / \tau}
-T_2(t, \tau) = \mathcal{N}(t, \mu=0, \sigma=\tau)
+\\
+T_2(t, \tau) = \mathcal{N}(x=t, \mu=0, \sigma=\tau)
 $$
 
 
