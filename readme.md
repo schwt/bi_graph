@@ -1,10 +1,14 @@
 # note
 An implementation of **bipartite graph(network)** algorithm.
+
 mathimatical expression:
+
 $$
 sim(i \to j) = \frac 1 {(\sum_u r_{uj})^{\lambda}} \sum_u \frac {r_{ui}r_{uj}}{(\sum_k r_{uk})^{\rho}} T(t_{ui} - t_{uj}, \tau)
 $$
+
 where time decay factor has two configurable types: half-life decay, and Guassian decay,
+
 $$
 T_1(t, \tau) = 2^{-t / \tau}
 T_2(t, \tau) = \mathcal{N}(t, \mu=0, \sigma=\tau)
