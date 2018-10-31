@@ -877,7 +877,11 @@ void printThreadProgression(vector<float>* vec_progression, int num_threads) {
     stream << " thread(" << num_threads << "): [";
     for (int id_thread = 0; id_thread < num_threads; id_thread++) {
         char buff[1024] = {0};
-        snprintf(buff, sizeof(buff), "  %5.2f", (*vec_progression)[id_thread]);
+        if ((*vec_progression)[id_thread] < 100.0) {
+            snprintf(buff, sizeof(buff), " %6.2f", (*vec_progression)[id_thread]);
+        } else {
+            snprintf(buff, sizeof(buff), " %6.1f", (*vec_progression)[id_thread]);
+        }
         stream << buff;
     }
     stream << "]";
@@ -1033,6 +1037,7 @@ void *_trainEachThread(void *args) {
         }
         item_cnt++;
     }
+    (*vec_progression)[thArgs->thread_id] = 100.0;
     time_t t_end;
     time(&t_end);
 
