@@ -880,7 +880,7 @@ void printThreadProgression(vector<float>* vec_progression, int num_threads) {
         if ((*vec_progression)[id_thread] < 100.0) {
             snprintf(buff, sizeof(buff), " %6.2f", (*vec_progression)[id_thread]);
         } else {
-            snprintf(buff, sizeof(buff), " %6.1f", (*vec_progression)[id_thread]);
+            snprintf(buff, sizeof(buff), "   --- ");
         }
         stream << buff;
     }
