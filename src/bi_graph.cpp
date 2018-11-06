@@ -596,6 +596,7 @@ float _guassian(int x, int tau) {
     return exp(-1.0 * x * x / 2.0 / tau/tau);
 }
 float _decay(int x, int time_decay_type, int tau) {
+    if (tau == 0) return 1;
     if (time_decay_type == 0) return _half_decay(x, tau);
     if (time_decay_type == 1) return _guassian(x, tau);
     return _half_decay(x, tau);
