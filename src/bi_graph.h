@@ -61,6 +61,7 @@ private:
     int idc_item_;
     int idc_time_;
     int idc_rate_;
+    int idc_num_;
 
     // 读数据过滤的行为分数范围: score_min_ <= x <= score_max_
     int score_min_;
