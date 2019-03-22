@@ -66,6 +66,7 @@ bool BiGraph::ReadConfigFile(string s_f_config)
     if (!(res = ReadConfig.ReadInto("input", "idc_item", idc_item_, 1))) return res;
     if (!(res = ReadConfig.ReadInto("input", "idc_rate", idc_rate_, 2))) return res;
     if (!(res = ReadConfig.ReadInto("input", "idc_time", idc_time_, 3))) return res;
+    if (!(res = ReadConfig.ReadInto("input", "idc_num",  idc_num_,  4))) return res;
 
     if (!(res = ReadConfig.ReadInto("parameter", "num_threads", num_threads_, 0))) return res;
     if (!(res = ReadConfig.ReadInto("parameter", "top_reserve",  top_reserve_))) return res;
@@ -82,7 +83,7 @@ bool BiGraph::ReadConfigFile(string s_f_config)
     if (!(res = ReadConfig.ReadInto("data", "BUFFERCNT",    BUFFERCNT))) return res;
     if (!(res = ReadConfig.ReadInto("data", "SORTMEMSIZE",  SORTMEMSIZE))) return res;
 
-    tau_ *= 3600;  // 小时转秒
+    tau_ *= 24*3600;  // 天数转秒
     F_output_idx_      = DIR_data_ + "/sim_item.idx";
     F_output_ivt_      = DIR_data_ + "/sim_item.ivt";
     F_output_txt_      = DIR_data_ + "/sim_item.txt";
@@ -306,11 +307,13 @@ bool BiGraph::LoadData_(string src, string dst, vector<int>& vec_item_id, bool i
         while (getline (fin, line)) {
             cnt1++;
             stringUtils::split(line, s_delimiter, sep_vec);
-            if (sep_vec.size() < 4) continue;
+            if ((int)sep_vec.size() != idc_num_) continue;
             string user   = sep_vec[idc_user_];
             int item      = atoi(sep_vec[idc_item_].c_str());
             int score     = atoi(sep_vec[idc_rate_].c_str());
             int timestamp = atoi(sep_vec[idc_time_].c_str());
+            if (user == "") continue;
+            if (item == 0 || score == 0 || timestamp == 0) continue;
             if (score < score_min_ || score > score_max_) continue;
 
             mapped_uid = ustl.get(hm_user_map_, user, (int)hm_user_map_.size());
