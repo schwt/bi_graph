@@ -396,7 +396,7 @@ bool BiGraph::LoadIds(string f_src, vector<int>& vec_item_id, set<int>& set_dst)
 
 void BiGraph::normalize(T_v_ivt& vec, float norm) {
     for (size_t i = 0; i < vec.size(); i++) {
-        vec[i].score /= pow(norm, rho_);
+        vec[i].score /= pow(norm+1, rho_);
     }
 }
     
@@ -661,7 +661,7 @@ bool BiGraph::Train() {
         for (int i = 0; i < collector_id; i++) {
             int id = vec_collector_id[i];
             vec_ivt_score[i].id    = vec_item_id_right_[id];
-            vec_ivt_score[i].score = vec_collector_score[id] / vec_item_right_norm_[id];
+            vec_ivt_score[i].score = vec_collector_score[id] / (1+vec_item_right_norm_[id]);
             sum += vec_ivt_score[i].score;
             vec_collector_id[i] = 0;
             vec_collector_score[id] = 0;
@@ -677,7 +677,7 @@ bool BiGraph::Train() {
         fwrite(&vec_ivt_score[0], sizeof(SimInvert), limit_len, fp_output_ivt);
         from += vec_output_idx[pid].count;
         if  (pid % progress_num == 0)  {
-            printf("progress: %.2f%% (%ld)\r", 100.0 * pid / num_item_left_, pid);
+            printf("progress: %.2f%% (%ld)\r", 100.0 * pid / (1+num_item_left_), pid);
             fflush(stdout);
         }
     }
@@ -727,14 +727,14 @@ bool BiGraph::TrainInMem() {
     int progress_num = Max(num_item_left_/10000, 1);
 
     for (size_t pid = 0; pid < num_item_left_; pid ++) {
-        int from_u = vec_matrix_idx_item_[pid].offset / sizeof(MatrixInvert);
+        int from_u = vec_matrix_idx_item_[pid].offset / (1+sizeof(MatrixInvert));
         int to_u   = vec_matrix_idx_item_[pid].count + from_u;
         int collector_id = 0;
         for (iivt_user = vec_ivt_user.begin() + from_u; iivt_user < vec_ivt_user.begin() + to_u; iivt_user++) {
 
             int user_id = iivt_user->id;
 
-            int from_i = vec_matrix_idx_user_[user_id].offset / sizeof(MatrixInvert);
+            int from_i = vec_matrix_idx_user_[user_id].offset / (1+sizeof(MatrixInvert));
             int to_i   = vec_matrix_idx_user_[user_id].count + from_i;
             for (iivt_item = vec_ivt_item.begin() + from_i; iivt_item < vec_ivt_item.begin() + to_i; iivt_item++) {
 
@@ -754,7 +754,7 @@ bool BiGraph::TrainInMem() {
         for (int i = 0; i < collector_id; i++) {
             int id = vec_collector_id[i];
             vec_ivt_score[i].id = vec_item_id_right_[id];
-            vec_ivt_score[i].score = vec_collector_score[id] / vec_item_right_norm_[id];
+            vec_ivt_score[i].score = vec_collector_score[id] / (1+vec_item_right_norm_[id]);
             sum += vec_ivt_score[i].score;
             vec_collector_score[id] = -1;
         }
@@ -763,7 +763,7 @@ bool BiGraph::TrainInMem() {
         if (if_norm_result_ == 1) {
             double max = vec_ivt_score[0].score != 0? vec_ivt_score[0].score: 1;
             for (int i = 0; i < len; i++) {
-                vec_ivt_score[i].score /= max;
+                vec_ivt_score[i].score /= (1+max);
             }
         }
 
@@ -775,7 +775,7 @@ bool BiGraph::TrainInMem() {
         fwrite(&vec_ivt_score[0], sizeof(SimInvert), len, fp_output_ivt);
         from += len;
         if (pid % progress_num == 0) {
-            printf("progress: %.2f%% (%ld)\r", 100.0 * pid / num_item_left_, pid);
+            printf("progress: %.2f%% (%ld)\r", 100.0 * pid / (1+num_item_left_), pid);
             fflush(stdout);
         }
     }
@@ -793,8 +793,8 @@ bool BiGraph::TrainInMem() {
     timer.EndTiming();
     long used_seconds = timer.UsedSeconds();
     logger.log("# train time: " + stringUtils::asString(used_seconds));
-    logger.log("#  mean time: " + stringUtils::asString(1.0 * used_seconds / num_item_left_));
-    logger.log("#  reco rate: " + stringUtils::asString(100.*vec_output_idx.size()/num_item_left_) 
+    logger.log("#  mean time: " + stringUtils::asString(1.0 * used_seconds / (1+num_item_left_)));
+    logger.log("#  reco rate: " + stringUtils::asString(100.*vec_output_idx.size()/(1+num_item_left_)) 
                + "% (" + stringUtils::asString(vec_output_idx.size()) 
                + "/"   + stringUtils::asString(num_item_left_) + ")"); 
 
@@ -865,8 +865,8 @@ void statIndex(vector<MatrixIndex>& src) {
         sum += src[i].count;
         sum_sqr += src[i].count * src[i].count;
     }
-    float mean  = sum / src.size();
-    float stder = pow(sum_sqr / src.size() - mean * mean, 0.5);
+    float mean  = sum / (1+src.size());
+    float stder = pow(sum_sqr / (1+src.size()) - mean * mean, 0.5);
     printf("mean : %f\n", mean);
     printf("stder: %f\n", stder);
     sort(vec.begin(), vec.end());
@@ -990,14 +990,14 @@ void *_trainEachThread(void *args) {
 
     for (size_t pid = 0; pid < vec_matrix_idx_item->size(); pid ++) {
         if (!checkThreadId(pid, thArgs->num_threads, thArgs->thread_id)) continue;
-        int from_u = (*vec_matrix_idx_item)[pid].offset / sizeof(MatrixInvert);
+        int from_u = (*vec_matrix_idx_item)[pid].offset / (1+sizeof(MatrixInvert));
         int to_u   = (*vec_matrix_idx_item)[pid].count + from_u;
         int collector_id = 0;
         for (vector<MatrixInvert>::iterator iivt_user = vec_ivt_user->begin() + from_u; iivt_user < vec_ivt_user->begin() + to_u; iivt_user++) {
 
             int user_id = iivt_user->id;
 
-            int from_i = (*vec_matrix_idx_user)[user_id].offset / sizeof(MatrixInvert);
+            int from_i = (*vec_matrix_idx_user)[user_id].offset / (1+sizeof(MatrixInvert));
             int to_i   = (*vec_matrix_idx_user)[user_id].count + from_i;
             sum_reco_user++;
             for (vector<MatrixInvert>::iterator iivt_item = vec_ivt_item->begin() + from_i; iivt_item < vec_ivt_item->begin() + to_i; iivt_item++) {
@@ -1019,7 +1019,7 @@ void *_trainEachThread(void *args) {
         for (int i = 0; i < collector_id; i++) {
             int id = vec_collector_id[i];
             vec_ivt_score[i].id = (*vec_item_id_right)[id];
-            vec_ivt_score[i].score = vec_collector_score[id] / (*item_right_norm)[id];
+            vec_ivt_score[i].score = vec_collector_score[id] / (1+(*item_right_norm)[id]);
             vec_collector_score[id] = -1;
         }
         int len =  Min(thArgs->top_reserve, collector_id);
@@ -1030,13 +1030,13 @@ void *_trainEachThread(void *args) {
         if (thArgs->if_norm_result == 1) {
             double max = vec_ivt_score[0].score != 0? vec_ivt_score[0].score: 1;
             for (int i = 0; i < len; i++) {
-                vec_ivt_score[i].score /= max;
+                vec_ivt_score[i].score /= (1+max);
             }
         }
 
         (*th_result).push_back(make_pair((*vec_item_id_left)[pid], vec_ivt_score));
         if  (pid % progress_num == 0)  {
-            (*vec_progression)[thArgs->thread_id] = 100.0*pid/vec_matrix_idx_item->size();
+            (*vec_progression)[thArgs->thread_id] = 100.0*pid/(1+vec_matrix_idx_item->size());
             printThreadProgression(vec_progression, thArgs->num_threads);
         }
         item_cnt++;
@@ -1046,7 +1046,7 @@ void *_trainEachThread(void *args) {
     time(&t_end);
 
     printf("%s Thread [%2d] done. (time: %ld, item: %d, muser: %ld, mitem: %ld)    \n", getNow(1).c_str(), thArgs->thread_id, t_end-t_begin, 
-            item_cnt, sum_reco_user/item_cnt, sum_reco_item/item_cnt);
+            item_cnt, sum_reco_user/(1+item_cnt), sum_reco_item/(1+item_cnt));
     pthread_exit((void *)true);
 }
 
