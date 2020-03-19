@@ -1,3 +1,5 @@
+## bi_graph的mapreduce实现
+
 ## usage
 1. 把./script 目录软链到应用路径
 2. 把本目录下其他文件copy到应用路径
